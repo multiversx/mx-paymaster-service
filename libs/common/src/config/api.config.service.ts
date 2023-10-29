@@ -274,4 +274,40 @@ export class ApiConfigService {
   getNativeAuthAcceptedOrigins(): string[] {
     return this.configService.get<string[]>('nativeAuth.acceptedOrigins') ?? [];
   }
+
+  getPaymasterContractAddress(): string {
+    const paymasterAddress = this.configService.get<string>('paymaster.contractAddress');
+    if (paymasterAddress === undefined) {
+      throw new Error('No paymaster contract address present');
+    }
+
+    return paymasterAddress;
+  }
+
+  getPaymasterGasLimit(): number {
+    const gas = this.configService.get<number>('paymaster.gasLimit');
+    if (gas === undefined) {
+      throw new Error('No paymaster gas limit present');
+    }
+
+    return gas;
+  }
+
+  getRelayerAddress(): string {
+    const relayerAddress = this.configService.get<string>('relayer.address');
+    if (relayerAddress === undefined) {
+      throw new Error('No relayer address present');
+    }
+
+    return relayerAddress;
+  }
+
+  getRelayerEGLDFee(): string {
+    const relayerFee = this.configService.get<string>('relayer.flatFeeEGLD');
+    if (relayerFee === undefined) {
+      throw new Error('No relayer fee present');
+    }
+
+    return relayerFee;
+  }
 }

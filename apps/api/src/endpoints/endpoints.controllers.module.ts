@@ -5,6 +5,7 @@ import { EndpointsServicesModule } from "./endpoints.services.module";
 import { ExampleController, HealthCheckController } from "@mvx-monorepo/common";
 import { TokensController } from "./tokens/token.controller";
 import { UsersController } from "./users/user.controller";
+import { TransactionController } from "./transactions/transaction.controller";
 
 @Module({
   imports: [
@@ -14,7 +15,12 @@ import { UsersController } from "./users/user.controller";
     DynamicModuleUtils.getNestJsApiConfigService(),
   ],
   controllers: [
-    AuthController, ExampleController, HealthCheckController, UsersController, TokensController,
+    AuthController,
+    ExampleController,
+    HealthCheckController,
+    UsersController,
+    TokensController,
+    TransactionController,
   ],
 })
 export class EndpointsControllersModule { }

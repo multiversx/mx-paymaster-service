@@ -10,7 +10,7 @@ database:
   port: 3306
   username: 'root'
   password: 'root'
-  name: 'example'
+  name: 'paymaster'
 features:
   publicApi:
     enabled: true
@@ -31,3 +31,10 @@ keepAliveTimeout:
   downstream: 61000
   upstream: 60000
 useCachingInterceptor: false
+paymaster:
+  contractAddress: 'erd1qqqqqqqqqqqqqpgqm0lf822t2w0ly66hg27kycuk4w0guzn43hvqf28p8w'
+  gasLimit: 10000000
+relayer:
+  address: 'erd1rwsq0fxjrce9955hvvl3qrpl96xmuuxch9m6wlhxx6zs0n2v3hvqyu4lm5'
+  pemFile: 'relayerWallet.pem'
+  flatFeeEGLD: '9000000000000000'

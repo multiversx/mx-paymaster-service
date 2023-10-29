@@ -4,6 +4,7 @@ import { TestSocketModule } from "./test-sockets/test.socket.module";
 import { TokenModule } from "./tokens/token.module";
 import { UsersModule } from "./users/user.module";
 import configuration from "../../config/configuration";
+import { TransactionModule } from "./transactions/transaction.module";
 
 @Module({
   imports: [
@@ -11,9 +12,10 @@ import configuration from "../../config/configuration";
     TestSocketModule,
     UsersModule,
     TokenModule,
+    TransactionModule,
   ],
   exports: [
-    ExampleModule, TestSocketModule, UsersModule, TokenModule,
+    ExampleModule, TestSocketModule, UsersModule, TokenModule, TransactionModule,
   ],
 })
 export class EndpointsServicesModule { }
