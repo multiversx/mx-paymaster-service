@@ -10,7 +10,7 @@ database:
   port: 3306
   username: 'root'
   password: 'root'
-  name: 'example'
+  name: 'paymaster'
 features:
   publicApi:
     enabled: true
@@ -31,3 +31,10 @@ keepAliveTimeout:
   downstream: 61000
   upstream: 60000
 useCachingInterceptor: false
+paymaster:
+  contractAddress:
+  gasLimit: 10000000
+relayer:
+  address:
+  pemFile:
+  flatFeeEGLD: '9000000000000000'
