@@ -36,5 +36,5 @@ paymaster:
   gasLimit: 10000000
 relayer:
   address:
-  pemFile:
+  pemFilePath:
   flatFeeEGLD: '9000000000000000'

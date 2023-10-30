@@ -33,8 +33,8 @@ keepAliveTimeout:
 useCachingInterceptor: false
 paymaster:
   contractAddress: 'erd1qqqqqqqqqqqqqpgqm0lf822t2w0ly66hg27kycuk4w0guzn43hvqf28p8w'
-  gasLimit: 10000000
+  gasLimit: 7000000
 relayer:
-  address: 'erd1rwsq0fxjrce9955hvvl3qrpl96xmuuxch9m6wlhxx6zs0n2v3hvqyu4lm5'
-  pemFile: 'relayerWallet.pem'
-  flatFeeEGLD: '9000000000000000'
+  address: 'erd1vcw3y2x7fphcmddy77ef2n8nzz792d5m7xmupczc6ccaus40hytsz4fcty'
+  pemFilePath: 'apps/api/src/wallets/relayerWallet.pem'
+  flatFeeEGLD: '15000000000000000'

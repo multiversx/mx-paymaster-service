@@ -1,25 +1,44 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger } from "@nestjs/common";
 import { TransactionDetails } from "./entities/transaction.details";
-import { Address, AddressValue, BytesType, BytesValue, TokenTransfer, Transaction, TypedValue, VariadicType, VariadicValue } from "@multiversx/sdk-core/out";
+import {
+  Address,
+  AddressValue,
+  BytesType,
+  BytesValue,
+  RelayedTransactionV2Builder,
+  TokenTransfer,
+  Transaction,
+  TransactionHash,
+  TypedValue,
+  VariadicType,
+  VariadicValue,
+} from "@multiversx/sdk-core/out";
 import { ApiService } from "@multiversx/sdk-nestjs-http";
-import { ApiConfigService, ContractLoader, ContractTransactionGenerator } from "@mvx-monorepo/common";
+import { ApiConfigService, CacheInfo, ContractLoader, ContractTransactionGenerator } from "@mvx-monorepo/common";
 import { ApiNetworkProvider } from "@multiversx/sdk-network-providers/out";
 import { TransactionDecoder, TransactionMetadata } from "@multiversx/sdk-transaction-decoder/lib/src/transaction.decoder";
 import BigNumber from "bignumber.js";
+import { CacheService } from "@multiversx/sdk-nestjs-cache";
+import { CachedPaymasterTxData } from "./entities/cached.paymaster.tx.data";
+import { promises } from "fs";
+import { UserSigner } from "@multiversx/sdk-wallet/out";
 
 @Injectable()
 export class TransactionService {
+  private readonly logger: Logger;
   private readonly contractLoader: ContractLoader;
   private readonly txGenerator: ContractTransactionGenerator;
+  private readonly networkProvider: ApiNetworkProvider;
 
   constructor(
     private readonly apiService: ApiService,
-    private readonly configService: ApiConfigService
+    private readonly configService: ApiConfigService,
+    private readonly cacheService: CacheService
   ) {
+    this.logger = new Logger(TransactionService.name);
     this.contractLoader = new ContractLoader(`apps/api/src/abis/paymaster.abi.json`);
-    this.txGenerator = new ContractTransactionGenerator(
-      new ApiNetworkProvider(this.configService.getApiUrl())
-    );
+    this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
+    this.txGenerator = new ContractTransactionGenerator(this.networkProvider);
   }
 
   async convertEGLDtoToken(egldAmount: BigNumber, tokenIdentifier: string): Promise<{
@@ -93,13 +112,119 @@ export class TransactionService {
       ]).withSender(
         signerAddress
       ).withGasLimit(
-        gasLimit
+        0
       ).withMultiESDTNFTTransfer(multiTransfer);
 
     const transaction = await this.txGenerator.createTransaction(interaction, signerAddress);
-    console.log(transaction.toPlainObject());
+
+    const cacheValue: CachedPaymasterTxData = {
+      hash: TransactionHash.compute(transaction).hex(),
+      gasLimit: gasLimit,
+    };
+
+    await this.cacheService.setRemote(
+      CacheInfo.PaymasterTx(signerAddress.bech32(), transaction.getNonce().valueOf()).key,
+      cacheValue,
+      CacheInfo.PaymasterTx(signerAddress.bech32(), transaction.getNonce().valueOf()).ttl
+    );
 
     return transaction;
+  }
+
+  async generateRelayedTx(paymasterTx: TransactionDetails) {
+    if (!paymasterTx.signature) {
+      throw new BadRequestException('Missing transaction signature');
+    }
+    const userSignature = paymasterTx.signature;
+    delete paymasterTx.signature;
+
+    const unsignedInnerTx = this.convertObjectToTransaction(paymasterTx);
+    const unsignedInnerTxHash = TransactionHash.compute(unsignedInnerTx);
+
+    const generatedPaymasterTx: CachedPaymasterTxData | undefined = await this.cacheService.getRemote(
+      CacheInfo.PaymasterTx(paymasterTx.sender, paymasterTx.nonce).key
+    );
+
+    if (!generatedPaymasterTx) {
+      throw new BadRequestException('Invalid or expired paymaster transaction');
+    }
+
+    if (unsignedInnerTxHash.hex() !== generatedPaymasterTx.hash) {
+      throw new BadRequestException('Transaction hash mismatch');
+    }
+
+    const innerTx = this.convertObjectToTransaction({
+      signature: userSignature,
+      ...paymasterTx,
+    });
+
+    const relayerAddress = this.configService.getRelayerAddress();
+    const relayerNonce = await this.getAccountNonce(relayerAddress);
+
+    const networkConfig = await this.networkProvider.getNetworkConfig();
+    const builder = new RelayedTransactionV2Builder();
+
+    try {
+      const relayedTxV2 = builder
+        .setInnerTransaction(innerTx)
+        .setInnerTransactionGasLimit(generatedPaymasterTx.gasLimit)
+        .setRelayerNonce(relayerNonce)
+        .setNetworkConfig(networkConfig)
+        .setRelayerAddress(new Address(relayerAddress))
+        .build();
+
+      const relayerSignature = await this.signRelayedTx(relayedTxV2);
+      relayedTxV2.applySignature(relayerSignature);
+
+      return relayedTxV2;
+    } catch (error) {
+      this.logger.error(error);
+
+      throw new BadRequestException('Failed to build relayed transaction');
+    }
+  }
+
+  async broadcastRelayedTx(transaction: Transaction): Promise<string> {
+    const txHash = await this.networkProvider.sendTransaction(transaction);
+    return txHash;
+  }
+
+  async signRelayedTx(transaction: Transaction) {
+    const pemText = await promises.readFile(
+      this.configService.getRelayerPEMFilePath(),
+      { encoding: "utf8" }
+    );
+    const signer = UserSigner.fromPem(pemText);
+
+    const serializedTransaction = transaction.serializeForSigning();
+    return await signer.sign(serializedTransaction);
+  }
+
+  convertObjectToTransaction(plainTx: TransactionDetails): Transaction {
+    const transaction = Transaction.fromPlainObject({
+      nonce: plainTx.nonce,
+      sender: plainTx.sender,
+      receiver: plainTx.receiver,
+      value: '0',
+      gasLimit: plainTx.gasLimit,
+      gasPrice: plainTx.gasPrice,
+      chainID: plainTx.chainID,
+      data: plainTx.data,
+      signature: plainTx.signature,
+      version: plainTx.version ?? 1,
+    });
+    return transaction;
+  }
+
+  async getAccountNonce(address: string): Promise<number> {
+    const url = `${this.configService.getApiUrl()}/accounts/${address}`;
+
+    try {
+      const response = await this.apiService.get(url);
+      return response.data.nonce;
+    } catch (error) {
+      throw new BadRequestException('Invalid address provided');
+    }
   }
 
   extractMetadata(txDetails: TransactionDetails): TransactionMetadata {

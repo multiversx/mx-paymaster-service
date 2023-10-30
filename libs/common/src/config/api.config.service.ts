@@ -302,6 +302,15 @@ export class ApiConfigService {
     return relayerAddress;
   }
 
+  getRelayerPEMFilePath(): string {
+    const pemFilePath = this.configService.get<string>('relayer.pemFilePath');
+    if (pemFilePath === undefined) {
+      throw new Error('No relayer PEM path present');
+    }
+
+    return pemFilePath;
+  }
+
   getRelayerEGLDFee(): string {
     const relayerFee = this.configService.get<string>('relayer.flatFeeEGLD');
     if (relayerFee === undefined) {
