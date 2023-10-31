@@ -5,6 +5,7 @@ import { Token, TokenDocument } from './schemas/token.schema';
 import { CreateTokenDto } from './dto/create.token.dto';
 import { ApiNetworkProvider } from '@multiversx/sdk-network-providers/out';
 import { ApiConfigService } from '@mvx-monorepo/common';
+import BigNumber from 'bignumber.js';
 
 @Injectable()
 export class TokenService {
@@ -21,7 +22,7 @@ export class TokenService {
     const token = new this.tokenModel(createTokenDto);
 
     try {
-      await this.getTokenFromAPI(token.identifier);
+      await this.getTokenDetails(token.identifier);
 
       return await token.save();
     } catch (error: any) {
@@ -39,7 +40,7 @@ export class TokenService {
   async findByIdentifier(identifier: string): Promise<Token> {
     const token = await this.tokenModel.findOne({ identifier: identifier }).exec();
     if (!token) {
-      throw new NotFoundException();
+      throw new NotFoundException(`Token not found`);
     }
 
     return token;
@@ -55,8 +56,28 @@ export class TokenService {
     }
   }
 
-  async getTokenFromAPI(tokenIdentifier: string) {
-    const token = await this.networkProvider.getDefinitionOfFungibleToken(tokenIdentifier);
-    return token;
+  async getTokenDetails(tokenIdentifier: string): Promise<any> {
+    const url = `tokens/${tokenIdentifier}`;
+
+    try {
+      return await this.networkProvider.doGetGeneric(url);
+    } catch (error) {
+      throw new BadRequestException('Invalid token identifier');
+    }
+  }
+
+  convertEGLDtoToken(
+    egldAmount: BigNumber,
+    egldPrice: number,
+    tokenPrice: number,
+    tokenDecimals: number
+  ): BigNumber {
+
+    const amountInUsd = BigNumber(egldPrice).dividedBy(`1e+18`).multipliedBy(egldAmount);
+    const tokenAmount = amountInUsd.dividedBy(BigNumber(tokenPrice))
+      .multipliedBy(`1e+${tokenDecimals}`)
+      .integerValue();
+
+    return tokenAmount;
   }
 }

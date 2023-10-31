@@ -38,3 +38,4 @@ relayer:
   address: 'erd1vcw3y2x7fphcmddy77ef2n8nzz792d5m7xmupczc6ccaus40hytsz4fcty'
   pemFilePath: 'apps/api/src/wallets/relayerWallet.pem'
   flatFeeEGLD: '15000000000000000'
+wrappedEGLDIdentifier: 'WEGLD-d7c6bb'

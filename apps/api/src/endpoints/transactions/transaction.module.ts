@@ -1,11 +1,10 @@
 import { Module } from "@nestjs/common";
 import { TransactionService } from "./transaction.service";
-import { DynamicModuleUtils } from "@mvx-monorepo/common";
-import configuration from "apps/api/config/configuration";
+import { TokenModule } from "../tokens/token.module";
 
 @Module({
   imports: [
-    DynamicModuleUtils.getApiModule(configuration),
+    TokenModule,
   ],
   providers: [
     TransactionService,

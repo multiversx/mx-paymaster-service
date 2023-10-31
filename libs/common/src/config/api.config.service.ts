@@ -319,4 +319,13 @@ export class ApiConfigService {
 
     return relayerFee;
   }
+
+  getWrappedEGLDIdentifier(): string {
+    const identifier = this.configService.get<string>('wrappedEGLDIdentifier');
+    if (identifier === undefined) {
+      throw new Error('No wrapped EGLD identifier present');
+    }
+
+    return identifier;
+  }
 }

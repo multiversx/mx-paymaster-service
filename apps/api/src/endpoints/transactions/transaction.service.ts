@@ -13,7 +13,6 @@ import {
   VariadicType,
   VariadicValue,
 } from "@multiversx/sdk-core/out";
-import { ApiService } from "@multiversx/sdk-nestjs-http";
 import { ApiConfigService, CacheInfo, ContractLoader, ContractTransactionGenerator } from "@mvx-monorepo/common";
 import { ApiNetworkProvider } from "@multiversx/sdk-network-providers/out";
 import { TransactionDecoder, TransactionMetadata } from "@multiversx/sdk-transaction-decoder/lib/src/transaction.decoder";
@@ -22,6 +21,7 @@ import { CacheService } from "@multiversx/sdk-nestjs-cache";
 import { CachedPaymasterTxData } from "./entities/cached.paymaster.tx.data";
 import { promises } from "fs";
 import { UserSigner } from "@multiversx/sdk-wallet/out";
+import { TokenService } from "../tokens/token.service";
 
 @Injectable()
 export class TransactionService {
@@ -31,9 +31,9 @@ export class TransactionService {
   private readonly networkProvider: ApiNetworkProvider;
 
   constructor(
-    private readonly apiService: ApiService,
     private readonly configService: ApiConfigService,
-    private readonly cacheService: CacheService
+    private readonly cacheService: CacheService,
+    private readonly tokenService: TokenService
   ) {
     this.logger = new Logger(TransactionService.name);
     this.contractLoader = new ContractLoader(`apps/api/src/abis/paymaster.abi.json`);
@@ -41,39 +41,32 @@ export class TransactionService {
     this.txGenerator = new ContractTransactionGenerator(this.networkProvider);
   }
 
-  async convertEGLDtoToken(egldAmount: BigNumber, tokenIdentifier: string): Promise<{
-    tokenAmount: BigNumber,
-    decimals: number
-  }> {
-    const { egldPrice, tokenPrice, tokenDecimals } = await this.getPricesInUsd(tokenIdentifier);
-
-    const amountInUsd = BigNumber(egldPrice).dividedBy(`1e+18`).multipliedBy(egldAmount);
-    const tokenAmount = amountInUsd.dividedBy(BigNumber(tokenPrice))
-      .multipliedBy(`1e+${tokenDecimals}`)
-      .integerValue();
-
-    return {
-      tokenAmount: tokenAmount,
-      decimals: tokenDecimals,
-    };
-  }
-
   async calculateRelayerPayment(gasLimit: number, tokenIdentifier: string): Promise<TokenTransfer> {
     const flatFee = BigNumber(this.configService.getRelayerEGLDFee());
     const egldAmount = BigNumber(gasLimit).plus(flatFee);
+    const wrappedEgldIndentifier = this.configService.getWrappedEGLDIdentifier();
 
-    const { tokenAmount, decimals } = await this.convertEGLDtoToken(egldAmount, tokenIdentifier);
-    const relayerPayment = TokenTransfer.fungibleFromBigInteger(
-      tokenIdentifier,
-      tokenAmount,
-      decimals
+    const [wrappedEgld, token] = await Promise.all([
+      this.tokenService.getTokenDetails(wrappedEgldIndentifier),
+      this.tokenService.getTokenDetails(tokenIdentifier),
+    ]);
+
+    if (!token.price || !token.decimals || !wrappedEgld.price) {
+      throw new BadRequestException('Missing token price or decimals');
+    }
+
+    const tokenAmount = this.tokenService.convertEGLDtoToken(
+      egldAmount,
+      wrappedEgld.price,
+      token.price,
+      token.decimals
     );
 
-    return relayerPayment;
+    return TokenTransfer.fungibleFromBigInteger(tokenIdentifier, tokenAmount, token.decimals);
   }
 
-  async generatePaymasterTx(txDetails: TransactionDetails, tokenIdentifier: string):
-    Promise<Transaction> {
+  async generatePaymasterTx(txDetails: TransactionDetails, tokenIdentifier: string): Promise<Transaction> {
+    const token = await this.tokenService.findByIdentifier(tokenIdentifier);
     const metadata = this.extractMetadata(txDetails);
 
     if (metadata.value.toString() !== '0') {
@@ -99,7 +92,7 @@ export class TransactionService {
     }
 
     const multiTransfer = [
-      await this.calculateRelayerPayment(gasLimit, tokenIdentifier),
+      await this.calculateRelayerPayment(gasLimit, token.identifier),
       ...this.extractTransfersFromMetadata(metadata),
     ];
 
@@ -131,7 +124,7 @@ export class TransactionService {
     return transaction;
   }
 
-  async generateRelayedTx(paymasterTx: TransactionDetails) {
+  async generateRelayedTx(paymasterTx: TransactionDetails): Promise<Transaction> {
     if (!paymasterTx.signature) {
       throw new BadRequestException('Missing transaction signature');
     }
@@ -189,7 +182,7 @@ export class TransactionService {
     return txHash;
   }
 
-  async signRelayedTx(transaction: Transaction) {
+  async signRelayedTx(transaction: Transaction): Promise<Buffer> {
     const pemText = await promises.readFile(
       this.configService.getRelayerPEMFilePath(),
       { encoding: "utf8" }
@@ -227,7 +220,7 @@ export class TransactionService {
       sender: txDetails.sender,
       receiver: txDetails.receiver,
       data: txDetails.data ?? '',
-      value: '0',
+      value: txDetails.value,
     });
 
     return metadata;
@@ -267,39 +260,5 @@ export class TransactionService {
         new BigNumber(element.value.toString())
       );
     });
-  }
-
-  private async getPricesInUsd(tokenIdentifier: string): Promise<{
-    egldPrice: number,
-    tokenPrice: number,
-    tokenDecimals: number
-  }> {
-    const egldTicker = 'WEGLD-d7c6bb';  // todo: move to config 
-    const url = `${this.configService.getApiUrl()}/tokens?identifiers=${egldTicker},${tokenIdentifier}`;
-
-    try {
-      const response = await this.apiService.get(url);
-
-      if (response.data.length !== 2) throw new Error();
-
-      const result = {
-        egldPrice: 0,
-        tokenPrice: 0,
-        tokenDecimals: 0,
-      };
-
-      response.data.forEach((element: any) => {
-        if (element.identifier === egldTicker) {
-          result.egldPrice = element.price;
-        } else {
-          result.tokenPrice = element.price;
-          result.tokenDecimals = element.decimals;
-        }
-      });
-
-      return result;
-    } catch (error) {
-      throw new BadRequestException('Invalid token identifier');
-    }
   }
 }
