@@ -11,6 +11,7 @@ import configuration from '../config/configuration';
     EndpointsServicesModule,
     EndpointsControllersModule,
     ApiConfigModule.forRoot(configuration),
+    DynamicModuleUtils.getCachingModule(configuration),
   ],
   providers: [
     DynamicModuleUtils.getNestJsApiConfigService(),

@@ -19,7 +19,7 @@ export class TransactionController {
   @ApiOkResponse({ type: Transaction })
   async generatePaymaster(@Body() request: GeneratePaymasterTxDto): Promise<Transaction> {
     const tx = await this.transactionService.generatePaymasterTx(request.transaction, request.token);
-    console.log(tx.toPlainObject());
+    // console.log(tx.toPlainObject());
     return tx;
   }
 

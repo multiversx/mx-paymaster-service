@@ -114,7 +114,6 @@ export class TransactionService {
         txDetails.chainID
       ).buildTransaction();
 
-    // const transaction = await this.txGenerator.createTransaction(interaction, signerAddress);
     const cacheValue: CachedPaymasterTxData = {
       hash: TransactionHash.compute(transaction).hex(),
       gasLimit: gasLimit,

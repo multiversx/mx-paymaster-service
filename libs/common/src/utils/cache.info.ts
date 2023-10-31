@@ -11,11 +11,6 @@ export class CacheInfo {
     };
   }
 
-  static Examples: CacheInfo = {
-    key: "examples",
-    ttl: Constants.oneHour(),
-  };
-
   static PaymasterTx(sender: string, nonce: number): CacheInfo {
     return {
       key: `paymasterTx:${sender}:${nonce}`,
