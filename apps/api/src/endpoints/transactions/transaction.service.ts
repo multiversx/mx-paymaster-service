@@ -217,14 +217,8 @@ export class TransactionService {
   }
 
   async getAccountNonce(address: string): Promise<number> {
-    const url = `${this.configService.getApiUrl()}/accounts/${address}`;
-
-    try {
-      const response = await this.apiService.get(url);
-      return response.data.nonce;
-    } catch (error) {
-      throw new BadRequestException('Invalid address provided');
-    }
+    const account = await this.networkProvider.getAccount(new Address(address));
+    return account.nonce;
   }
 
   extractMetadata(txDetails: TransactionDetails): TransactionMetadata {

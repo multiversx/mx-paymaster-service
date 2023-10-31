@@ -1,21 +1,18 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { ApiResponseProperty } from '@nestjs/swagger';
 import { Document } from 'mongoose';
 
 export type TokenDocument = Token & Document;
 
 @Schema()
 export class Token {
-  @Prop({ required: true })
-  identifier?: string;
+  @ApiResponseProperty()
+  @Prop({ required: true, unique: true, index: true })
+  identifier!: string;
 
-  @Prop()
+  @ApiResponseProperty()
+  @Prop({ required: false, default: null })
   name?: string;
-
-  @Prop()
-  accounts?: number;
-
-  @Prop()
-  transactions?: number;
 }
 
 export const TokenSchema = SchemaFactory.createForClass(Token);

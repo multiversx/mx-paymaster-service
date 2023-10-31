@@ -3,7 +3,7 @@ import { DynamicModuleUtils } from "@mvx-monorepo/common";
 import { AuthController } from "./auth/auth.controller";
 import { EndpointsServicesModule } from "./endpoints.services.module";
 import { ExampleController, HealthCheckController } from "@mvx-monorepo/common";
-import { TokensController } from "./tokens/token.controller";
+import { TokenController } from "./tokens/token.controller";
 import { UsersController } from "./users/user.controller";
 import { TransactionController } from "./transactions/transaction.controller";
 
@@ -19,7 +19,7 @@ import { TransactionController } from "./transactions/transaction.controller";
     ExampleController,
     HealthCheckController,
     UsersController,
-    TokensController,
+    TokenController,
     TransactionController,
   ],
 })
