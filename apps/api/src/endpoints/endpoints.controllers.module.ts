@@ -4,6 +4,7 @@ import { EndpointsServicesModule } from "./endpoints.services.module";
 import { HealthCheckController } from "@mvx-monorepo/common";
 import { TokenController } from "./tokens/token.controller";
 import { TransactionController } from "./transactions/transaction.controller";
+import { RelayerController } from "./relayer/relayer.controller";
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { TransactionController } from "./transactions/transaction.controller";
   ],
   controllers: [
     HealthCheckController,
+    RelayerController,
     TokenController,
     TransactionController,
   ],
