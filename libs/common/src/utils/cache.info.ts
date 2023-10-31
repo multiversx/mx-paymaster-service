@@ -22,4 +22,18 @@ export class CacheInfo {
       ttl: Constants.oneMinute() * 2,
     };
   }
+
+  static TokenDetails(identifier: string): CacheInfo {
+    return {
+      key: `tokenDetails:${identifier}`,
+      ttl: Constants.oneSecond() * 15,
+    };
+  }
+
+  static AccountNonce(address: string): CacheInfo {
+    return {
+      key: `accountNonce:${address}`,
+      ttl: Constants.oneSecond() * 15,
+    };
+  }
 }

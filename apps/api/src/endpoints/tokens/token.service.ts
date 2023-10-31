@@ -4,8 +4,10 @@ import { Model } from 'mongoose';
 import { Token, TokenDocument } from './schemas/token.schema';
 import { CreateTokenDto } from './dto/create.token.dto';
 import { ApiNetworkProvider } from '@multiversx/sdk-network-providers/out';
-import { ApiConfigService } from '@mvx-monorepo/common';
+import { ApiConfigService, CacheInfo } from '@mvx-monorepo/common';
 import BigNumber from 'bignumber.js';
+import { CacheService } from '@multiversx/sdk-nestjs-cache';
+import { Constants } from '@multiversx/sdk-nestjs-common';
 
 @Injectable()
 export class TokenService {
@@ -14,6 +16,7 @@ export class TokenService {
   constructor(
     @InjectModel(Token.name) private readonly tokenModel: Model<TokenDocument>,
     private readonly configService: ApiConfigService,
+    private readonly cachingService: CacheService
   ) {
     this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
   }
@@ -57,6 +60,15 @@ export class TokenService {
   }
 
   async getTokenDetails(tokenIdentifier: string): Promise<any> {
+    return await this.cachingService.getOrSet(
+      CacheInfo.TokenDetails(tokenIdentifier).key,
+      async () => await this.getTokenDetailsRaw(tokenIdentifier),
+      CacheInfo.TokenDetails(tokenIdentifier).ttl,
+      Constants.oneSecond()
+    );
+  }
+
+  async getTokenDetailsRaw(tokenIdentifier: string): Promise<any> {
     const url = `tokens/${tokenIdentifier}`;
 
     try {

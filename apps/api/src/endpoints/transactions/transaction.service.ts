@@ -13,7 +13,7 @@ import {
   VariadicType,
   VariadicValue,
 } from "@multiversx/sdk-core/out";
-import { ApiConfigService, CacheInfo, ContractLoader, ContractTransactionGenerator } from "@mvx-monorepo/common";
+import { ApiConfigService, CacheInfo, ContractLoader } from "@mvx-monorepo/common";
 import { ApiNetworkProvider } from "@multiversx/sdk-network-providers/out";
 import { TransactionDecoder, TransactionMetadata } from "@multiversx/sdk-transaction-decoder/lib/src/transaction.decoder";
 import BigNumber from "bignumber.js";
@@ -22,23 +22,23 @@ import { CachedPaymasterTxData } from "./entities/cached.paymaster.tx.data";
 import { promises } from "fs";
 import { UserSigner } from "@multiversx/sdk-wallet/out";
 import { TokenService } from "../tokens/token.service";
+import { Constants } from "@multiversx/sdk-nestjs-common";
 
 @Injectable()
 export class TransactionService {
   private readonly logger: Logger;
   private readonly contractLoader: ContractLoader;
-  private readonly txGenerator: ContractTransactionGenerator;
   private readonly networkProvider: ApiNetworkProvider;
 
   constructor(
     private readonly configService: ApiConfigService,
     private readonly cacheService: CacheService,
-    private readonly tokenService: TokenService
+    private readonly tokenService: TokenService,
+    private readonly cachingService: CacheService
   ) {
     this.logger = new Logger(TransactionService.name);
     this.contractLoader = new ContractLoader(`apps/api/src/abis/paymaster.abi.json`);
     this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
-    this.txGenerator = new ContractTransactionGenerator(this.networkProvider);
   }
 
   async calculateRelayerPayment(gasLimit: number, tokenIdentifier: string): Promise<TokenTransfer> {
@@ -96,7 +96,7 @@ export class TransactionService {
       ...this.extractTransfersFromMetadata(metadata),
     ];
 
-    const interaction = contract.methodsExplicit
+    const transaction = contract.methodsExplicit
       .forwardExecution([
         new AddressValue(new Address(relayerAddress)),
         new AddressValue(new Address(metadata.receiver)),
@@ -106,19 +106,24 @@ export class TransactionService {
         signerAddress
       ).withGasLimit(
         0
-      ).withMultiESDTNFTTransfer(multiTransfer);
+      ).withMultiESDTNFTTransfer(
+        multiTransfer
+      ).withNonce(
+        txDetails.nonce
+      ).withChainID(
+        txDetails.chainID
+      ).buildTransaction();
 
-    const transaction = await this.txGenerator.createTransaction(interaction, signerAddress);
-
+    // const transaction = await this.txGenerator.createTransaction(interaction, signerAddress);
     const cacheValue: CachedPaymasterTxData = {
       hash: TransactionHash.compute(transaction).hex(),
       gasLimit: gasLimit,
     };
 
     await this.cacheService.setRemote(
-      CacheInfo.PaymasterTx(signerAddress.bech32(), transaction.getNonce().valueOf()).key,
+      CacheInfo.PaymasterTx(signerAddress.bech32(), txDetails.nonce).key,
       cacheValue,
-      CacheInfo.PaymasterTx(signerAddress.bech32(), transaction.getNonce().valueOf()).ttl
+      CacheInfo.PaymasterTx(signerAddress.bech32(), txDetails.nonce).ttl
     );
 
     return transaction;
@@ -210,6 +215,15 @@ export class TransactionService {
   }
 
   async getAccountNonce(address: string): Promise<number> {
+    return await this.cachingService.getOrSet(
+      CacheInfo.AccountNonce(address).key,
+      async () => await this.getAccountNonceRaw(address),
+      CacheInfo.AccountNonce(address).ttl,
+      Constants.oneSecond()
+    );
+  }
+
+  async getAccountNonceRaw(address: string): Promise<number> {
     const account = await this.networkProvider.getAccount(new Address(address));
     return account.nonce;
   }
