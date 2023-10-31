@@ -1,9 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Post, UsePipes, ValidationPipe } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
 import { Token } from './schemas/token.schema';
 import { TokenService } from './token.service';
 import { CreateTokenDto } from './dto/create.token.dto';
 import { ParseTokenPipe } from '@multiversx/sdk-nestjs-common';
-import { ApiBadRequestResponse, ApiCreatedResponse, ApiForbiddenResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { ApiBadRequestResponse, ApiBearerAuth, ApiCreatedResponse, ApiForbiddenResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
+import { NativeAuthAdminGuard, NativeAuthGuard } from '@multiversx/sdk-nestjs-auth';
 
 @ApiTags('tokens')
 @Controller('tokens')
@@ -11,7 +12,9 @@ export class TokenController {
   constructor(private readonly tokenService: TokenService) { }
 
   @Post()
+  @UseGuards(NativeAuthGuard, NativeAuthAdminGuard)
   @UsePipes(new ValidationPipe())
+  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Add token',
     description: 'Insert a token accepted as relayer fee',
@@ -50,7 +53,9 @@ export class TokenController {
   }
 
   @Delete(':identifier')
+  @UseGuards(NativeAuthGuard, NativeAuthAdminGuard)
   @UsePipes(new ValidationPipe())
+  @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete token' })
   @ApiNotFoundResponse({ description: 'Token not found.' })
   @ApiBadRequestResponse({ description: 'Invalid identifier' })

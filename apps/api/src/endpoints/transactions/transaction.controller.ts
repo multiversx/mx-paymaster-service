@@ -1,8 +1,8 @@
-import { Body, Controller, Post } from "@nestjs/common";
+import { Body, Controller, Post, UsePipes, ValidationPipe } from "@nestjs/common";
 import { TransactionService } from "./transaction.service";
-import { ApiTags } from "@nestjs/swagger";
+import { ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { GeneratePaymasterTxDto } from "./entities/generate.paymaster.tx.dto";
-import { IPlainTransactionObject } from "@multiversx/sdk-core/out";
+import { Transaction } from "@multiversx/sdk-core/out";
 import { GenerateRelayedTxDto } from "./entities/generate.relayed.tx.dto";
 
 @Controller('transactions')
@@ -11,14 +11,21 @@ export class TransactionController {
   constructor(private readonly transactionService: TransactionService) { }
 
   @Post('/generate-paymaster')
-  async generatePaymaster(@Body() request: GeneratePaymasterTxDto): Promise<IPlainTransactionObject> {
-
+  @UsePipes(new ValidationPipe())
+  @ApiOperation({
+    summary: 'Paymaster tx',
+    description: 'Generate a Paymaster SC transaction from a regular transaction',
+  })
+  @ApiOkResponse({ type: Transaction })
+  async generatePaymaster(@Body() request: GeneratePaymasterTxDto): Promise<Transaction> {
     const tx = await this.transactionService.generatePaymasterTx(request.transaction, request.token);
-    return tx.toPlainObject();
+    console.log(tx.toPlainObject());
+    return tx;
   }
 
   @Post('/generate-relayed')
-  async generateRelayed(@Body() request: GenerateRelayedTxDto): Promise<IPlainTransactionObject> {
+  @UsePipes(new ValidationPipe())
+  async generateRelayed(@Body() request: GenerateRelayedTxDto): Promise<Transaction> {
 
     const tx = await this.transactionService.generateRelayedTx(request.transaction);
 
@@ -26,6 +33,6 @@ export class TransactionController {
       await this.transactionService.broadcastRelayedTx(tx);
     }
 
-    return tx.toPlainObject();
+    return tx;
   }
 }
