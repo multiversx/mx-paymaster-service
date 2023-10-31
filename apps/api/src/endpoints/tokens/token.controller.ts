@@ -1,7 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Post, UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
-import { Token } from './schemas/token.schema';
+import { Token } from './entities/schemas/token.schema';
 import { TokenService } from './token.service';
-import { CreateTokenDto } from './dto/create.token.dto';
+import { CreateTokenDto } from './entities/create.token.dto';
 import { ParseTokenPipe } from '@multiversx/sdk-nestjs-common';
 import { ApiBadRequestResponse, ApiBearerAuth, ApiCreatedResponse, ApiForbiddenResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { NativeAuthAdminGuard, NativeAuthGuard } from '@multiversx/sdk-nestjs-auth';

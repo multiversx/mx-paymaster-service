@@ -1,8 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Token, TokenDocument } from './schemas/token.schema';
-import { CreateTokenDto } from './dto/create.token.dto';
+import { Token, TokenDocument } from './entities/schemas/token.schema';
+import { CreateTokenDto } from './entities/create.token.dto';
 import { ApiNetworkProvider } from '@multiversx/sdk-network-providers/out';
 import { ApiConfigService, CacheInfo } from '@mvx-monorepo/common';
 import BigNumber from 'bignumber.js';
