@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { TransactionDetails } from "./transaction.details";
+import { TransactionDetails } from "../../paymaster/entities/transaction.details";
 
 export class GenerateRelayedTxDto {
   @ApiProperty()

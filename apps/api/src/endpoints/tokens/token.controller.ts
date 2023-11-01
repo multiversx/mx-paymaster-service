@@ -17,7 +17,7 @@ export class TokenController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Add token',
-    description: 'Insert a token accepted as relayer fee',
+    description: 'Insert a token to be accepted as relayer fee',
   })
   @ApiCreatedResponse({ type: Token })
   @ApiBadRequestResponse({ description: 'Invalid input' })

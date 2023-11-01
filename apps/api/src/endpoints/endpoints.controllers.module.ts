@@ -3,7 +3,7 @@ import { DynamicModuleUtils } from "@mvx-monorepo/common";
 import { EndpointsServicesModule } from "./endpoints.services.module";
 import { HealthCheckController } from "@mvx-monorepo/common";
 import { TokenController } from "./tokens/token.controller";
-import { TransactionController } from "./transactions/transaction.controller";
+import { PaymasterController } from "./paymaster/paymaster.controller";
 import { RelayerController } from "./relayer/relayer.controller";
 
 @Module({
@@ -16,8 +16,8 @@ import { RelayerController } from "./relayer/relayer.controller";
   controllers: [
     HealthCheckController,
     RelayerController,
+    PaymasterController,
     TokenController,
-    TransactionController,
   ],
 })
 export class EndpointsControllersModule { }

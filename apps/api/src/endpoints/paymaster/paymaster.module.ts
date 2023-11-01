@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { TransactionService } from "./transaction.service";
+import { PaymasterService } from "./paymaster.service";
 import { TokenModule } from "../tokens/token.module";
 
 @Module({
@@ -7,8 +7,8 @@ import { TokenModule } from "../tokens/token.module";
     TokenModule,
   ],
   providers: [
-    TransactionService,
+    PaymasterService,
   ],
-  exports: [TransactionService],
+  exports: [PaymasterService],
 })
-export class TransactionModule { }
+export class PaymasterModule { }
