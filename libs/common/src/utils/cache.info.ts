@@ -25,6 +25,11 @@ export class CacheInfo {
     };
   }
 
+  static EgldPrice: CacheInfo = {
+    key: "egldPrice",
+    ttl: Constants.oneSecond() * 15,
+  };
+
   static AccountNonce(address: string): CacheInfo {
     return {
       key: `accountNonce:${address}`,

@@ -78,6 +78,25 @@ export class TokenService {
     }
   }
 
+  async getEGLDPrice(): Promise<number> {
+    return await this.cachingService.getOrSet(
+      CacheInfo.EgldPrice.key,
+      async () => await this.getEGLDPriceRaw(),
+      CacheInfo.EgldPrice.ttl,
+      Constants.oneSecond() * 3
+    );
+  }
+
+  async getEGLDPriceRaw(): Promise<number> {
+    const url = `economics?extract=price`;
+
+    try {
+      return await this.networkProvider.doGetGeneric(url);
+    } catch (error) {
+      throw new BadRequestException('Invalid token identifier');
+    }
+  }
+
   convertEGLDtoToken(
     egldAmount: BigNumber,
     egldPrice: number,

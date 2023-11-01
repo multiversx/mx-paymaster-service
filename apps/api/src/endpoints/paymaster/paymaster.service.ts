@@ -36,20 +36,20 @@ export class PaymasterService {
   async calculateRelayerPayment(gasLimit: number, tokenIdentifier: string): Promise<TokenTransfer> {
     const flatFee = BigNumber(this.configService.getRelayerEGLDFee());
     const egldAmount = BigNumber(gasLimit).plus(flatFee);
-    const wrappedEgldIndentifier = this.configService.getWrappedEGLDIdentifier();
+    // const wrappedEgldIndentifier = this.configService.getWrappedEGLDIdentifier();
 
-    const [wrappedEgld, token] = await Promise.all([
-      this.tokenService.getTokenDetails(wrappedEgldIndentifier),
+    const [egldPrice, token] = await Promise.all([
+      this.tokenService.getEGLDPrice(),
       this.tokenService.getTokenDetails(tokenIdentifier),
     ]);
 
-    if (!token.price || !token.decimals || !wrappedEgld.price) {
+    if (!token.price || !token.decimals) {
       throw new BadRequestException('Missing token price or decimals');
     }
 
     const tokenAmount = this.tokenService.convertEGLDtoToken(
       egldAmount,
-      wrappedEgld.price,
+      egldPrice,
       token.price,
       token.decimals
     );
