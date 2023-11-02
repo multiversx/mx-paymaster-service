@@ -14,7 +14,7 @@ import { PaymasterService } from "../paymaster/paymaster.service";
 export class RelayerService {
   private readonly logger = new OriginLogger(RelayerService.name);
   private readonly networkProvider: ApiNetworkProvider;
-
+  private relayerSigner!: UserSigner;
 
   constructor(
     private readonly configService: ApiConfigService,
@@ -64,14 +64,24 @@ export class RelayerService {
   }
 
   async signRelayedTx(transaction: Transaction): Promise<Buffer> {
-    const pemText = await promises.readFile(
-      this.configService.getRelayerPEMFilePath(),
-      { encoding: "utf8" }
-    );
-    const signer = UserSigner.fromPem(pemText);
+    if (!this.relayerSigner) {
+      await this.loadWallet();
+    }
 
     const serializedTransaction = transaction.serializeForSigning();
-    return await signer.sign(serializedTransaction);
+    return await this.relayerSigner.sign(serializedTransaction);
+  }
+
+  async loadWallet(): Promise<void> {
+    try {
+      const pemText = await promises.readFile(
+        this.configService.getRelayerPEMFilePath(),
+        { encoding: "utf8" }
+      );
+      this.relayerSigner = UserSigner.fromPem(pemText);
+    } catch (error) {
+      throw new BadRequestException('Relayer wallet is not set up');
+    }
   }
 
   async broadcastRelayedTx(transaction: Transaction): Promise<string> {
