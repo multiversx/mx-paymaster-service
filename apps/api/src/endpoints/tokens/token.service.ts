@@ -1,62 +1,41 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
-import { Token, TokenDocument } from './entities/schemas/token.schema';
-import { CreateTokenDto } from './entities/create.token.dto';
 import { ApiNetworkProvider } from '@multiversx/sdk-network-providers/out';
 import { ApiConfigService, CacheInfo } from '@mvx-monorepo/common';
 import BigNumber from 'bignumber.js';
 import { CacheService } from '@multiversx/sdk-nestjs-cache';
 import { Constants } from '@multiversx/sdk-nestjs-common';
+import { TokenConfig } from './entities/token.config';
 
 @Injectable()
 export class TokenService {
   private readonly networkProvider: ApiNetworkProvider;
 
   constructor(
-    @InjectModel(Token.name) private readonly tokenModel: Model<TokenDocument>,
     private readonly configService: ApiConfigService,
     private readonly cachingService: CacheService
   ) {
     this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
   }
 
-  async create(createTokenDto: CreateTokenDto): Promise<Token> {
-    const token = new this.tokenModel(createTokenDto);
-
-    try {
-      await this.getTokenDetails(token.identifier);
-
-      return await token.save();
-    } catch (error: any) {
-      if (error.code && error.code === 11000) {
-        throw new BadRequestException(`Duplicate data`);
-      }
-      throw new BadRequestException(`Invalid data`);
-    }
-  }
-
-  async findAll(): Promise<Token[]> {
-    return await this.tokenModel.find().exec();
-  }
-
-  async findByIdentifier(identifier: string): Promise<Token> {
-    const token = await this.tokenModel.findOne({ identifier: identifier }).exec();
-    if (!token) {
-      throw new NotFoundException(`Token not found`);
-    }
-
-    return token;
-  }
-
-  async delete(identifier: string): Promise<void> {
-    const token = await this.tokenModel.findOneAndRemove({
-      identifier: identifier,
+  findAll(): TokenConfig[] {
+    const tokens = this.configService.getAcceptedTokens();
+    return tokens.map((elem) => {
+      const identifier = Object.keys(elem)[0];
+      return {
+        identifier: identifier,
+        ...elem[identifier],
+      };
     });
+  }
+
+  findByIdentifier(identifier: string): TokenConfig {
+    const allTokens = this.findAll();
+    const token = allTokens.find(elem => elem.identifier === identifier);
 
     if (!token) {
-      throw new NotFoundException(`Token not found`);
+      throw new NotFoundException('Token not found');
     }
+    return token;
   }
 
   async getTokenDetails(tokenIdentifier: string): Promise<any> {

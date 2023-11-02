@@ -320,6 +320,11 @@ export class ApiConfigService {
     return relayerFee;
   }
 
+  getAcceptedTokens(): any[] {
+    const tokens = this.configService.get('tokens');
+    return tokens;
+  }
+
   getWrappedEGLDIdentifier(): string {
     const identifier = this.configService.get<string>('wrappedEGLDIdentifier');
     if (identifier === undefined) {

@@ -58,7 +58,7 @@ export class PaymasterService {
   }
 
   async generatePaymasterTx(txDetails: TransactionDetails, tokenIdentifier: string): Promise<Transaction> {
-    const token = await this.tokenService.findByIdentifier(tokenIdentifier);
+    const token = this.tokenService.findByIdentifier(tokenIdentifier);
     const metadata = TransactionUtils.extractMetadata(txDetails);
 
     if (metadata.value.toString() !== '0') {
