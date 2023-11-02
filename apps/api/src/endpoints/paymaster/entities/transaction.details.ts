@@ -1,7 +1,8 @@
+import { IPlainTransactionObject } from "@multiversx/sdk-core/out";
 import { ApiProperty } from "@nestjs/swagger";
 import { IsInt, IsNotEmpty, IsOptional } from "class-validator";
 
-export class TransactionDetails {
+export class TransactionDetails implements IPlainTransactionObject {
   @ApiProperty()
   @IsNotEmpty()
   chainID: string = '';

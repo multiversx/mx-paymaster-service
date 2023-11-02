@@ -32,13 +32,17 @@ keepAliveTimeout:
   upstream: 60000
 useCachingInterceptor: false
 paymaster:
-  contractAddress: 'erd1qqqqqqqqqqqqqpgqm0lf822t2w0ly66hg27kycuk4w0guzn43hvqf28p8w'
-  gasLimit: 7000000
+  contractAddress: 'erd1qqqqqqqqqqqqqpgqvfnt8jj0e5808lk3557dgzs6twcne5083hvqetsaqp'
+  gasLimit: 10000000
 relayer:
   address: 'erd1vcw3y2x7fphcmddy77ef2n8nzz792d5m7xmupczc6ccaus40hytsz4fcty'
   pemFilePath: 'apps/api/src/wallets/relayerWallet.pem'
   flatFeeEGLD: '15000000000000000'
+wrappedEGLDIdentifier: 'WEGLD-a28c59'
 tokens:
   - USDC-350c4e:
-      feePercentage: 0.23
-      feeAmount: '150000000000'
+      feePercentage: 0.25
+      feeAmount: '15000'
+  - RIDE-05b1bb:
+      feePercentage: 5
+      feeAmount: '0'

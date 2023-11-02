@@ -78,13 +78,13 @@ export class TokenService {
 
   convertEGLDtoToken(
     egldAmount: BigNumber,
-    egldPrice: number,
-    tokenPrice: number,
+    egldPrice: BigNumber,
+    tokenPrice: BigNumber,
     tokenDecimals: number
   ): BigNumber {
 
-    const amountInUsd = BigNumber(egldPrice).dividedBy(`1e+18`).multipliedBy(egldAmount);
-    const tokenAmount = amountInUsd.dividedBy(BigNumber(tokenPrice))
+    const amountInUsd = egldPrice.dividedBy(`1e+18`).multipliedBy(egldAmount);
+    const tokenAmount = amountInUsd.dividedBy(tokenPrice)
       .multipliedBy(`1e+${tokenDecimals}`)
       .integerValue();
 

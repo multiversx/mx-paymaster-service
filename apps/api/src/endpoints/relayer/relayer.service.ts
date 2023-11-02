@@ -29,6 +29,7 @@ export class RelayerService {
       throw new BadRequestException('Missing transaction signature');
     }
     const paymasterTxData = await this.paymasterServer.getCachedTxData(paymasterTx);
+
     const innerTx = TransactionUtils.convertObjectToTransaction(paymasterTx);
 
     const relayerAddress = this.configService.getRelayerAddress();

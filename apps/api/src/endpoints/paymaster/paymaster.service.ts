@@ -18,11 +18,15 @@ import { CacheService } from "@multiversx/sdk-nestjs-cache";
 import { CachedPaymasterTxData } from "./entities/cached.paymaster.tx.data";
 import { TokenService } from "../tokens/token.service";
 import { TransactionUtils } from "./transaction.utils";
+import { ApiNetworkProvider } from "@multiversx/sdk-network-providers/out";
+import { TokenConfig } from "../tokens/entities/token.config";
+import { PaymasterArguments } from "./entities/paymaster.arguments";
 
 @Injectable()
 export class PaymasterService {
   private readonly logger: Logger;
   private readonly contractLoader: ContractLoader;
+  private readonly networkProvider: ApiNetworkProvider;
 
   constructor(
     private readonly configService: ApiConfigService,
@@ -31,34 +35,40 @@ export class PaymasterService {
   ) {
     this.logger = new Logger(PaymasterService.name);
     this.contractLoader = new ContractLoader(`apps/api/src/abis/paymaster.abi.json`);
+    this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
   }
 
-  async calculateRelayerPayment(gasLimit: number, tokenIdentifier: string): Promise<TokenTransfer> {
-    const flatFee = BigNumber(this.configService.getRelayerEGLDFee());
-    const egldAmount = BigNumber(gasLimit).plus(flatFee);
-    // const wrappedEgldIndentifier = this.configService.getWrappedEGLDIdentifier();
+  async getRelayerPayment(feeEgldAmount: BigNumber, token: TokenConfig): Promise<TokenTransfer> {
+    const flatFee = BigNumber(token.feeAmount);
+    const feePercentage = BigNumber(token.feePercentage);
 
-    const [egldPrice, token] = await Promise.all([
+    const [egldPrice, feeToken] = await Promise.all([
       this.tokenService.getEGLDPrice(),
-      this.tokenService.getTokenDetails(tokenIdentifier),
+      this.tokenService.getTokenDetails(token.identifier),
     ]);
 
-    if (!token.price || !token.decimals) {
+    if (!feeToken.price || !feeToken.decimals) {
       throw new BadRequestException('Missing token price or decimals');
     }
 
-    const tokenAmount = this.tokenService.convertEGLDtoToken(
-      egldAmount,
-      egldPrice,
-      token.price,
-      token.decimals
+    console.log('feeEgldAmount', feeEgldAmount.toString());
+    const feeTokenAmount = this.tokenService.convertEGLDtoToken(
+      feeEgldAmount,
+      BigNumber(egldPrice),
+      BigNumber(feeToken.price),
+      feeToken.decimals
     );
 
-    return TokenTransfer.fungibleFromBigInteger(tokenIdentifier, tokenAmount, token.decimals);
+    const tokenAmount = feeTokenAmount.plus(flatFee);
+    const percentageAmount = tokenAmount.multipliedBy(feePercentage).dividedToIntegerBy(100);
+    const finalAmount = tokenAmount.plus(percentageAmount);
+    console.log('finalAmount', finalAmount.toString());
+    return TokenTransfer.fungibleFromBigInteger(token.identifier, finalAmount, feeToken.decimals);
   }
 
   async generatePaymasterTx(txDetails: TransactionDetails, tokenIdentifier: string): Promise<Transaction> {
     const token = this.tokenService.findByIdentifier(tokenIdentifier);
+    this.tokenService.findByIdentifier(tokenIdentifier);
     const metadata = TransactionUtils.extractMetadata(txDetails);
 
     if (metadata.value.toString() !== '0') {
@@ -69,46 +79,80 @@ export class PaymasterService {
       throw new BadRequestException('Missing function call');
     }
 
-    const paymasterAddress = this.configService.getPaymasterContractAddress();
+    const networkConfig = await this.networkProvider.getNetworkConfig();
     const relayerAddress = this.configService.getRelayerAddress();
-    const signerAddress = new Address(txDetails.sender);
-
-    const contract = await this.contractLoader.getContract(paymasterAddress);
     const gasLimit = this.configService.getPaymasterGasLimit() + txDetails.gasLimit;
 
-    let endpointParams: TypedValue[] = [];
-    if (metadata.functionArgs) {
-      endpointParams = metadata.functionArgs.map((element) =>
-        BytesValue.fromHex(element)
-      );
-    }
+    const typedArguments = this.getTypedSCArguments({
+      relayerAddress: relayerAddress,
+      destinationAddress: metadata.receiver,
+      functionName: metadata.functionName,
+      functionParams: metadata.functionArgs,
+    });
 
+    const existingTransfers = TransactionUtils.extractTransfersFromMetadata(metadata);
+
+    const dummyRelayerTransfer = this.getDummyRelayerPayment();
+    const tempTransfer = [dummyRelayerTransfer, ...existingTransfers];
+    const tempTransaction = await this.buildPaymasterTx(txDetails, typedArguments, tempTransfer, gasLimit);
+
+    const fee = BigNumber(tempTransaction.computeFee(networkConfig));
     const multiTransfer = [
-      await this.calculateRelayerPayment(gasLimit, token.identifier),
-      ...TransactionUtils.extractTransfersFromMetadata(metadata),
+      await this.getRelayerPayment(fee, token),
+      ...existingTransfers,
     ];
-
-    const transaction = contract.methodsExplicit
-      .forwardExecution([
-        new AddressValue(new Address(relayerAddress)),
-        new AddressValue(new Address(metadata.receiver)),
-        BytesValue.fromUTF8(metadata.functionName),
-        new VariadicValue(new VariadicType(new BytesType()), endpointParams),
-      ]).withSender(
-        signerAddress
-      ).withGasLimit(
-        0
-      ).withMultiESDTNFTTransfer(
-        multiTransfer
-      ).withNonce(
-        txDetails.nonce
-      ).withChainID(
-        txDetails.chainID
-      ).buildTransaction();
+    const transaction = await this.buildPaymasterTx(txDetails, typedArguments, multiTransfer, 0);
 
     await this.setCachedTxData(transaction, gasLimit);
 
     return transaction;
+  }
+
+  async buildPaymasterTx(initialTx: TransactionDetails, scArguments: TypedValue[], multiTransfer: TokenTransfer[], gasLimit: number):
+    Promise<Transaction> {
+    const paymasterAddress = this.configService.getPaymasterContractAddress();
+    const signerAddress = new Address(initialTx.sender);
+
+    const contract = await this.contractLoader.getContract(paymasterAddress);
+    const transaction = contract.methodsExplicit
+      .forwardExecution(
+        scArguments
+      ).withSender(
+        signerAddress
+      ).withGasLimit(
+        gasLimit
+      ).withGasPrice(
+        initialTx.gasPrice
+      ).withMultiESDTNFTTransfer(
+        multiTransfer
+      ).withNonce(
+        initialTx.nonce
+      ).withChainID(
+        initialTx.chainID
+      ).buildTransaction();
+    return transaction;
+  }
+
+  getDummyRelayerPayment() {
+    const wrappedEgldIdentigier = this.configService.getWrappedEGLDIdentifier();
+    const dummyFee = BigNumber('0.00056').multipliedBy('1e+18');
+    return TokenTransfer.fungibleFromBigInteger(wrappedEgldIdentigier, dummyFee, 18);
+  }
+
+  getTypedSCArguments(plainArguments: PaymasterArguments): TypedValue[] {
+    let endpointParams: TypedValue[] = [];
+    if (plainArguments.functionParams) {
+      endpointParams = plainArguments.functionParams.map((element) =>
+        BytesValue.fromHex(element)
+      );
+    }
+
+    return [
+      new AddressValue(new Address(plainArguments.relayerAddress)),
+      new AddressValue(new Address(plainArguments.destinationAddress)),
+      BytesValue.fromUTF8(plainArguments.functionName),
+      new VariadicValue(new VariadicType(new BytesType()), endpointParams),
+    ];
   }
 
   async setCachedTxData(transaction: Transaction, gasLimit: number) {
@@ -129,19 +173,20 @@ export class PaymasterService {
   }
 
   async getCachedTxData(txObject: TransactionDetails): Promise<CachedPaymasterTxData> {
-    if (txObject.signature) {
-      delete txObject.signature;
+    const clonedTx = { ...txObject };
+    if (clonedTx.signature) {
+      delete clonedTx.signature;
     }
 
-    const transaction = TransactionUtils.convertObjectToTransaction(txObject);
+    const transaction = TransactionUtils.convertObjectToTransaction(clonedTx);
     const transactionHash = TransactionHash.compute(transaction);
 
     const txData = await this.cacheService.getRemote<CachedPaymasterTxData>(
-      CacheInfo.PaymasterTx(txObject.sender, txObject.nonce).key
+      CacheInfo.PaymasterTx(clonedTx.sender, clonedTx.nonce).key
     );
 
     if (!txData) {
-      this.logger.warn('Invalid or expired paymaster transaction', txObject);
+      this.logger.warn('Invalid or expired paymaster transaction', clonedTx);
 
       throw new BadRequestException('Invalid or expired paymaster transaction');
     }
