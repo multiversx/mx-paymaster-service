@@ -39,3 +39,4 @@ relayer:
   pemFilePath:
   flatFeeEGLD: '9000000000000000'
 wrappedEGLDIdentifier:
+tokens:
