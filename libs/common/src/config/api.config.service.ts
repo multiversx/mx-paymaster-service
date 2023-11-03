@@ -333,4 +333,22 @@ export class ApiConfigService {
 
     return identifier;
   }
+
+  getIsAutoSwapFeatureActive(): boolean {
+    const isAutoSwapActive = this.configService.get<boolean>('features.swap.enabled');
+    if (isAutoSwapActive === undefined) {
+      throw new Error('No auto swap feature flag present');
+    }
+
+    return isAutoSwapActive;
+  }
+
+  getAutoSwapCronSchedule(): string {
+    const cronScheduleExpression = this.configService.get<string>('features.swap.cron');
+    if (cronScheduleExpression === undefined) {
+      throw new Error('No auto swap cron expression present');
+    }
+
+    return cronScheduleExpression;
+  }
 }
