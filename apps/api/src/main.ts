@@ -23,6 +23,7 @@ import '@multiversx/sdk-nestjs-common/lib/utils/extensions/date.extensions';
 import '@multiversx/sdk-nestjs-common/lib/utils/extensions/number.extensions';
 import '@multiversx/sdk-nestjs-common/lib/utils/extensions/string.extensions';
 import configuration from '../config/configuration';
+import { SwapModule } from './autoswap/swap.module';
 
 async function bootstrap() {
   const publicApp = await NestFactory.create(PublicAppModule);
@@ -86,6 +87,11 @@ async function bootstrap() {
     await privateApp.listen(apiConfigService.getPrivateApiFeaturePort());
   }
 
+  if (apiConfigService.getIsAutoSwapFeatureActive()) {
+    const autoSwapApp = await NestFactory.create(SwapModule);
+    await autoSwapApp.listen(7777);
+  }
+
   const logger = new Logger('Bootstrapper');
 
   LoggerInitializer.initialize(logger);
@@ -110,6 +116,7 @@ async function bootstrap() {
 
   logger.log(`Public API active: ${apiConfigService.getIsPublicApiFeatureActive()}`);
   logger.log(`Private API active: ${apiConfigService.getIsPrivateApiFeatureActive()}`);
+  logger.log(`AutoSwap active: ${apiConfigService.getIsAutoSwapFeatureActive()}`);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
