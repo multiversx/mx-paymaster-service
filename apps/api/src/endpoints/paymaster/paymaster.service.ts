@@ -5,6 +5,7 @@ import {
   AddressValue,
   BytesType,
   BytesValue,
+  SmartContract,
   TokenTransfer,
   Transaction,
   TransactionHash,
@@ -51,7 +52,6 @@ export class PaymasterService {
       throw new BadRequestException('Missing token price or decimals');
     }
 
-    console.log('feeEgldAmount', feeEgldAmount.toString());
     const feeTokenAmount = this.tokenService.convertEGLDtoToken(
       feeEgldAmount,
       BigNumber(egldPrice),
@@ -62,13 +62,12 @@ export class PaymasterService {
     const tokenAmount = feeTokenAmount.plus(flatFee);
     const percentageAmount = tokenAmount.multipliedBy(feePercentage).dividedToIntegerBy(100);
     const finalAmount = tokenAmount.plus(percentageAmount);
-    console.log('finalAmount', finalAmount.toString());
+
     return TokenTransfer.fungibleFromBigInteger(token.identifier, finalAmount, feeToken.decimals);
   }
 
   async generatePaymasterTx(txDetails: TransactionDetails, tokenIdentifier: string): Promise<Transaction> {
     const token = this.tokenService.findByIdentifier(tokenIdentifier);
-    this.tokenService.findByIdentifier(tokenIdentifier);
     const metadata = TransactionUtils.extractMetadata(txDetails);
 
     if (metadata.value.toString() !== '0') {
@@ -79,7 +78,8 @@ export class PaymasterService {
       throw new BadRequestException('Missing function call');
     }
 
-    const networkConfig = await this.networkProvider.getNetworkConfig();
+    const paymasterAddress = this.configService.getPaymasterContractAddress();
+    const contract = await this.contractLoader.getContract(paymasterAddress);
     const relayerAddress = this.configService.getRelayerAddress();
     const gasLimit = this.configService.getPaymasterGasLimit() + txDetails.gasLimit;
 
@@ -94,26 +94,24 @@ export class PaymasterService {
 
     const dummyRelayerTransfer = this.getDummyRelayerPayment();
     const tempTransfer = [dummyRelayerTransfer, ...existingTransfers];
-    const tempTransaction = await this.buildPaymasterTx(txDetails, typedArguments, tempTransfer, gasLimit);
+    const tempTransaction = this.buildPaymasterTx(txDetails, contract, typedArguments, tempTransfer, gasLimit);
 
+    const networkConfig = await this.networkProvider.getNetworkConfig();
     const fee = BigNumber(tempTransaction.computeFee(networkConfig));
     const multiTransfer = [
       await this.getRelayerPayment(fee, token),
       ...existingTransfers,
     ];
-    const transaction = await this.buildPaymasterTx(txDetails, typedArguments, multiTransfer, 0);
+    const transaction = this.buildPaymasterTx(txDetails, contract, typedArguments, multiTransfer, 0);
 
     await this.setCachedTxData(transaction, gasLimit);
 
     return transaction;
   }
 
-  async buildPaymasterTx(initialTx: TransactionDetails, scArguments: TypedValue[], multiTransfer: TokenTransfer[], gasLimit: number):
-    Promise<Transaction> {
-    const paymasterAddress = this.configService.getPaymasterContractAddress();
+  buildPaymasterTx(initialTx: TransactionDetails, contract: SmartContract, scArguments: TypedValue[], multiTransfer: TokenTransfer[], gasLimit: number):
+    Transaction {
     const signerAddress = new Address(initialTx.sender);
-
-    const contract = await this.contractLoader.getContract(paymasterAddress);
     const transaction = contract.methodsExplicit
       .forwardExecution(
         scArguments

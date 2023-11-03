@@ -52,7 +52,7 @@
     "start:cache-warmer:custom:debug": "npm run copy-custom-config-cache-warmer & nest build cache-warmer & nest start cache-warmer --watch --debug",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-    "test": "node --expose-gc --no-compilation-cache ./node_modules/.bin/jest --logHeapUsage --forceExit --logHeapUsage --maxWorkers=2",
+    "test": "node --expose-gc --no-compilation-cache ./node_modules/.bin/jest --logHeapUsage --detectOpenHandles --forceExit --logHeapUsage --maxWorkers=2",
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
