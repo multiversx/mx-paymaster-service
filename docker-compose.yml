@@ -8,10 +8,3 @@ services:
     environment:
       - REDIS_REPLICATION_MODE=master
 
-  mongodb:
-    image: mongo:latest
-    environment:
-      - MONGODB_DATABASE="paymaster"
-    ports:
-      - 27017:27017
-
