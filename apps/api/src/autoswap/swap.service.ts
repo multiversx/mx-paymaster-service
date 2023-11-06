@@ -61,7 +61,9 @@ export class SwapService {
     }
   }
 
-  async executeSwapTx(swapParams: TokenSwap) {
+  async buildAndBroadcastSwapTx(swapParams: TokenSwap): Promise<string> {
+    this.logger.log(`Start swap sequence for token ${swapParams.identifier}`);
+
     const relayerAddress = this.configService.getRelayerAddress();
     const networkConfig = await this.getNetworkConfig();
     const watcher = this.getTransactionWatcher();
@@ -85,12 +87,15 @@ export class SwapService {
     try {
       await this.networkProvider.sendTransaction(transaction);
     } catch (error) {
+      this.logger.error(`Swap failed for token ${swapParams.identifier}`);
       this.logger.error(error);
-      throw new Error(`Swap failed for token ${swapParams.identifier}`);
+      // throw new Error(`Swap failed for token ${swapParams.identifier}`);
+      return '';
     }
 
     const txOnNetwork = await watcher.awaitCompleted(transaction);
-    return txOnNetwork;
+    this.logger.log(`Successfully swapped ${swapParams.identifier} in tx ${txOnNetwork.hash}`);
+    return txOnNetwork.hash;
   }
 
   async getNetworkConfig(): Promise<NetworkConfig> {

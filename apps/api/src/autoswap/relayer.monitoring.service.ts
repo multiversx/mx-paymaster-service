@@ -2,6 +2,7 @@ import { Locker } from "@multiversx/sdk-nestjs-common";
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import { SwapService } from "./swap.service";
+import { TokenSwap } from "./entities/token.swap";
 
 @Injectable()
 export class RelayerMonitoringService {
@@ -23,22 +24,15 @@ export class RelayerMonitoringService {
           return;
         }
 
-        const swapPromises = tokensToBeSwapped.map((tokenSwap) => {
-          return this.swapService.executeSwapTx(tokenSwap);
-        });
-
-        for (const swapPromise of swapPromises) {
-          try {
-            const swapTransaction = await swapPromise;
-            this.logger.log(`Swap completed in transaction ${swapTransaction.hash}`);
-          } catch (error) {
-            this.logger.error(error);
-          }
-        }
+        const reduceSwapTxs = async (previous: any, tokenSwap: TokenSwap) => {
+          await previous;
+          return this.swapService.buildAndBroadcastSwapTx(tokenSwap);
+        };
+        tokensToBeSwapped.reduce(reduceSwapTxs, Promise.resolve());
 
       } catch (error) {
         this.logger.error(error);
       }
-    }, true);
+    });
   }
 }
