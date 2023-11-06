@@ -18,4 +18,7 @@ export class TokenConfig {
 
   @ApiProperty()
   swapMinAmount?: string;
+
+  @ApiProperty()
+  swapGasLimit?: number;
 }

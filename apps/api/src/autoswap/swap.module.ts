@@ -4,6 +4,10 @@ import { RelayerMonitoringService } from "./relayer.monitoring.service";
 import configuration from '../../config/configuration';
 import { ApiConfigModule, DynamicModuleUtils } from "@mvx-monorepo/common";
 import { TokenModule } from "../endpoints/tokens/token.module";
+import { SwapService } from "./swap.service";
+import { RelayerService } from "../endpoints/relayer/relayer.service";
+import { RelayerModule } from "../endpoints/relayer/relayer.module";
+import { PaymasterService } from "../endpoints/paymaster/paymaster.service";
 
 @Module({
   imports: [
@@ -11,12 +15,13 @@ import { TokenModule } from "../endpoints/tokens/token.module";
     ApiConfigModule.forRoot(configuration),
     DynamicModuleUtils.getCachingModule(configuration),
     TokenModule,
+    RelayerModule,
   ],
   providers: [
-    RelayerMonitoringService,
+    RelayerMonitoringService, SwapService, RelayerService, PaymasterService,
   ],
   exports: [
-    RelayerMonitoringService,
+    RelayerMonitoringService, SwapService,
   ],
 })
 export class SwapModule { }

@@ -64,6 +64,7 @@ export class RelayerService {
     }
   }
 
+  // todo: rename to signTx
   async signRelayedTx(transaction: Transaction): Promise<Buffer> {
     if (!this.relayerSigner) {
       await this.loadWallet();

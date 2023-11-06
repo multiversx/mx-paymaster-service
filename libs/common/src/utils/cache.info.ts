@@ -33,7 +33,7 @@ export class CacheInfo {
   static AccountNonce(address: string): CacheInfo {
     return {
       key: `accountNonce:${address}`,
-      ttl: Constants.oneSecond() * 15,
+      ttl: Constants.oneSecond() * 1,
     };
   }
 }
