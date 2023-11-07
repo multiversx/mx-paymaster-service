@@ -19,7 +19,7 @@ import { CacheService } from "@multiversx/sdk-nestjs-cache";
 import { CachedPaymasterTxData } from "./entities/cached.paymaster.tx.data";
 import { TokenService } from "../tokens/token.service";
 import { TransactionUtils } from "./transaction.utils";
-import { ApiNetworkProvider } from "@multiversx/sdk-network-providers/out";
+import { ApiNetworkProvider, NetworkConfig } from "@multiversx/sdk-network-providers/out";
 import { TokenConfig } from "../tokens/entities/token.config";
 import { PaymasterArguments } from "./entities/paymaster.arguments";
 
@@ -28,6 +28,7 @@ export class PaymasterService {
   private readonly logger: Logger;
   private readonly contractLoader: ContractLoader;
   private readonly networkProvider: ApiNetworkProvider;
+  private networkConfig: NetworkConfig | undefined = undefined;
 
   constructor(
     private readonly configService: ApiConfigService,
@@ -96,7 +97,7 @@ export class PaymasterService {
     const tempTransfer = [dummyRelayerTransfer, ...existingTransfers];
     const tempTransaction = this.buildPaymasterTx(txDetails, contract, typedArguments, tempTransfer, gasLimit);
 
-    const networkConfig = await this.networkProvider.getNetworkConfig();
+    const networkConfig = await this.getNetworkConfig();
     const fee = BigNumber(tempTransaction.computeFee(networkConfig));
     const multiTransfer = [
       await this.getRelayerPayment(fee, token),
@@ -132,9 +133,9 @@ export class PaymasterService {
   }
 
   getDummyRelayerPayment() {
-    const wrappedEgldIdentigier = this.configService.getWrappedEGLDIdentifier();
+    const wrappedEgldIdentifier = this.configService.getWrappedEGLDIdentifier();
     const dummyFee = BigNumber('0.00056').multipliedBy('1e+18');
-    return TokenTransfer.fungibleFromBigInteger(wrappedEgldIdentigier, dummyFee, 18);
+    return TokenTransfer.fungibleFromBigInteger(wrappedEgldIdentifier, dummyFee, 18);
   }
 
   getTypedSCArguments(plainArguments: PaymasterArguments): TypedValue[] {
@@ -194,5 +195,26 @@ export class PaymasterService {
     }
 
     return txData;
+  }
+
+  async getNetworkConfig(): Promise<NetworkConfig> {
+    if (!this.networkConfig) {
+      this.networkConfig = await this.loadNetworkConfig();
+    }
+
+    return this.networkConfig;
+  }
+
+  async loadNetworkConfig(): Promise<NetworkConfig> {
+    try {
+      const networkConfig: NetworkConfig = await this.networkProvider.getNetworkConfig();
+
+      return networkConfig;
+    } catch (error) {
+      this.logger.log(`Unexpected error when trying to load network config`);
+      this.logger.error(error);
+
+      throw new Error('Error when loading network config');
+    }
   }
 }
