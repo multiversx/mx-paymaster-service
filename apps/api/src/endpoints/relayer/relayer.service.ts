@@ -2,12 +2,11 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import { TransactionDetails } from "../paymaster/entities/transaction.details";
 import { Address, RelayedTransactionV2Builder, Transaction } from "@multiversx/sdk-core/out";
 import { TransactionUtils } from "../paymaster/transaction.utils";
-import { ApiConfigService, CacheInfo } from "@mvx-monorepo/common";
-import { ApiNetworkProvider } from "@multiversx/sdk-network-providers/out";
+import { ApiConfigService } from "@mvx-monorepo/common";
+import { ApiNetworkProvider, NetworkConfig } from "@multiversx/sdk-network-providers/out";
 import { promises } from "fs";
 import { UserSigner } from "@multiversx/sdk-wallet/out";
-import { CacheService } from "@multiversx/sdk-nestjs-cache";
-import { Constants, OriginLogger } from "@multiversx/sdk-nestjs-common";
+import { OriginLogger } from "@multiversx/sdk-nestjs-common";
 import { PaymasterService } from "../paymaster/paymaster.service";
 
 @Injectable()
@@ -15,11 +14,11 @@ export class RelayerService {
   private readonly logger = new OriginLogger(RelayerService.name);
   private readonly networkProvider: ApiNetworkProvider;
   private relayerSigner!: UserSigner;
+  private networkConfig: NetworkConfig | undefined = undefined;
 
   constructor(
     private readonly configService: ApiConfigService,
     private readonly paymasterServer: PaymasterService,
-    private readonly cacheService: CacheService,
   ) {
     this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
   }
@@ -44,7 +43,7 @@ export class RelayerService {
   }
 
   async buildRelayedTx(innerTx: Transaction, gasLimit: number, nonce: number) {
-    const networkConfig = await this.networkProvider.getNetworkConfig();
+    const networkConfig = await this.getNetworkConfig();
     const builder = new RelayedTransactionV2Builder();
     const relayerAddress = this.configService.getRelayerAddress();
 
@@ -92,16 +91,28 @@ export class RelayerService {
   }
 
   async getNonce(address: string): Promise<number> {
-    return await this.cacheService.getOrSet(
-      CacheInfo.AccountNonce(address).key,
-      async () => await this.getNonceRaw(address),
-      CacheInfo.AccountNonce(address).ttl,
-      Constants.oneSecond()
-    );
-  }
-
-  async getNonceRaw(address: string): Promise<number> {
     const account = await this.networkProvider.getAccount(new Address(address));
     return account.nonce;
+  }
+
+  async getNetworkConfig(): Promise<NetworkConfig> {
+    if (!this.networkConfig) {
+      this.networkConfig = await this.loadNetworkConfig();
+    }
+
+    return this.networkConfig;
+  }
+
+  async loadNetworkConfig(): Promise<NetworkConfig> {
+    try {
+      const networkConfig: NetworkConfig = await this.networkProvider.getNetworkConfig();
+
+      return networkConfig;
+    } catch (error) {
+      this.logger.log(`Unexpected error when trying to load network config`);
+      this.logger.error(error);
+
+      throw new Error('Error when loading network config');
+    }
   }
 }
