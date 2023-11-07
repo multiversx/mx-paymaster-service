@@ -187,7 +187,7 @@ export class PaymasterService {
     if (!txData) {
       this.logger.warn('Invalid or expired paymaster transaction', clonedTx);
 
-      throw new NotFoundException('Invalid or expired paymaster transaction');
+      throw new NotFoundException('Paymaster transaction not found');
     }
 
     if (transactionHash.hex() !== txData.hash) {
