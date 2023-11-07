@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger } from "@nestjs/common";
+import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { TransactionDetails } from "./entities/transaction.details";
 import {
   Address,
@@ -187,7 +187,7 @@ export class PaymasterService {
     if (!txData) {
       this.logger.warn('Invalid or expired paymaster transaction', clonedTx);
 
-      throw new BadRequestException('Invalid or expired paymaster transaction');
+      throw new NotFoundException('Invalid or expired paymaster transaction');
     }
 
     if (transactionHash.hex() !== txData.hash) {
