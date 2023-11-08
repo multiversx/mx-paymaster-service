@@ -5,7 +5,7 @@ import { TokenConfig } from "../endpoints/tokens/entities/token.config";
 import { TokenService } from "../endpoints/tokens/token.service";
 import BigNumber from "bignumber.js";
 import { TokenSwap } from "./entities/token.swap";
-import { Address, Transaction, TransactionPayload, TransactionWatcher } from "@multiversx/sdk-core/out";
+import { Address, ITransactionOnNetwork, Transaction, TransactionPayload, TransactionWatcher } from "@multiversx/sdk-core/out";
 import { RelayerService } from "../endpoints/relayer/relayer.service";
 import { TransactionUtils } from "../endpoints/paymaster/transaction.utils";
 
@@ -29,9 +29,14 @@ export class SwapService {
   }
 
   async getSwappableTokens(): Promise<TokenSwap[]> {
-    const tokensToBeSwapped = this.tokens.filter(
-      token => token.swapContract && token.swapMinAmount && token.swapParameters && token.swapGasLimit
+    const wrappedEgldIdentifier = this.configService.getWrappedEGLDIdentifier();
+
+    const tokensToBeSwapped = this.tokens.filter(token =>
+      token.identifier !== wrappedEgldIdentifier &&
+      token.swapContract && token.swapMinAmount &&
+      token.swapParameters && token.swapGasLimit
     );
+
     const tokenIdentifiers = tokensToBeSwapped.map(elem => elem.identifier).toString();
     const relayerAddress = this.configService.getRelayerAddress();
 
@@ -57,26 +62,22 @@ export class SwapService {
       });
     } catch (error) {
       this.logger.error(error);
-      throw new Error('Fetch relayer token balance fetch request failed.');
+      throw new Error('Fetch relayer token balance request failed.');
     }
   }
 
-  async buildAndBroadcastSwapTx(swapParams: TokenSwap): Promise<string> {
-    this.logger.log(`Start swap sequence for token ${swapParams.identifier}`);
-
-    const relayerAddress = this.configService.getRelayerAddress();
+  async buildTransaction(tokenSwap: TokenSwap, nonce: number,): Promise<Transaction> {
     const networkConfig = await this.getNetworkConfig();
-    const watcher = this.getTransactionWatcher();
+    const relayerAddress = this.configService.getRelayerAddress();
 
-    const payload = `ESDTTransfer@${swapParams.identifier}@${swapParams.amount}@${swapParams.swapParameters}`;
-    const nonce = await this.relayerService.getNonce(relayerAddress);
-
+    const payload = `ESDTTransfer@${tokenSwap.identifier}@${tokenSwap.amount}@${tokenSwap.swapParameters}`;
     const transaction = new Transaction({
       nonce: nonce,
-      receiver: new Address(swapParams.swapContract),
+      receiver: new Address(tokenSwap.swapContract),
+      value: '0',
       sender: new Address(relayerAddress),
       chainID: networkConfig.ChainID,
-      gasLimit: swapParams.swapGasLimit,
+      gasLimit: tokenSwap.swapGasLimit,
       gasPrice: 1000000000,
       data: TransactionPayload.fromEncoded(TransactionUtils.encodeTransactionData(payload)),
     });
@@ -84,18 +85,66 @@ export class SwapService {
     const relayerSignature = await this.relayerService.signRelayedTx(transaction);
     transaction.applySignature(relayerSignature);
 
+    return transaction;
+  }
+
+  async buildAndBroadcastSwapTx(swapParams: TokenSwap, nonce: number): Promise<Transaction> {
+    this.logger.log(`Start swap sequence for token ${swapParams.identifier}`);
+
+    console.log(`Current nonce ${nonce}`);
+
+    const transaction = await this.buildTransaction(swapParams, nonce);
     try {
-      await this.networkProvider.sendTransaction(transaction);
+      const hash = await this.broadcastTransaction(transaction);
+      this.logger.log(`Successfuly broadcasted swap tx ${hash}`);
+
+      return transaction;
     } catch (error) {
       this.logger.error(`Swap failed for token ${swapParams.identifier}`);
       this.logger.error(error);
-      // throw new Error(`Swap failed for token ${swapParams.identifier}`);
-      return '';
+
+      throw new Error(`Broadcast failed for swap ${swapParams.identifier} transaction`);
+    }
+  }
+
+  async broadcastTransaction(transaction: Transaction, attempts: number = 0) {
+    const MAX_ATTEMPTS = 5;
+    while (attempts <= MAX_ATTEMPTS) {
+      try {
+        const hash = await this.networkProvider.sendTransaction(transaction);
+
+        return hash;
+      } catch (error) {
+        attempts++;
+        this.logger.log(`Broadcast attempt ${attempts} failed: ${error}`);
+
+        await this.sleep(700);
+      }
     }
 
-    const txOnNetwork = await watcher.awaitCompleted(transaction);
-    this.logger.log(`Successfully swapped ${swapParams.identifier} in tx ${txOnNetwork.hash}`);
-    return txOnNetwork.hash;
+    throw new Error(`Broadcast failed for tx ${transaction.getHash().hex()}`);
+  }
+
+  async confirmTxSettled(transaction: Transaction): Promise<ITransactionOnNetwork> {
+    const watcher = this.getTransactionWatcher();
+    const MAX_ATTEMPTS = 30;
+    let attempts = 0;
+
+    while (attempts <= MAX_ATTEMPTS) {
+      try {
+        const txOnNetwork = await watcher.awaitCompleted(transaction);
+        this.logger.log(`Swap confirmed for transaction ${txOnNetwork.hash}`);
+
+        return txOnNetwork;
+      } catch (error) {
+        attempts++;
+        this.logger.warn(`Confirmation attempt ${attempts} failed: ${error}`);
+
+        await this.sleep(1000);
+      }
+    }
+
+    throw new Error(`Transaction ${transaction.getHash().hex()} could not be confirmed`);
   }
 
   async getNetworkConfig(): Promise<NetworkConfig> {
@@ -112,5 +161,9 @@ export class SwapService {
     }
 
     return this.transactionWatcher;
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, Number(ms)));
   }
 }

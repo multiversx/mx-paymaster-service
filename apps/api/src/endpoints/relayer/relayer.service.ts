@@ -2,12 +2,13 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 import { TransactionDetails } from "../paymaster/entities/transaction.details";
 import { Address, RelayedTransactionV2Builder, Transaction } from "@multiversx/sdk-core/out";
 import { TransactionUtils } from "../paymaster/transaction.utils";
-import { ApiConfigService } from "@mvx-monorepo/common";
+import { ApiConfigService, CacheInfo } from "@mvx-monorepo/common";
 import { ApiNetworkProvider, NetworkConfig } from "@multiversx/sdk-network-providers/out";
 import { promises } from "fs";
 import { UserSigner } from "@multiversx/sdk-wallet/out";
 import { OriginLogger } from "@multiversx/sdk-nestjs-common";
 import { PaymasterService } from "../paymaster/paymaster.service";
+import { RedisCacheService } from "@multiversx/sdk-nestjs-cache";
 
 @Injectable()
 export class RelayerService {
@@ -19,6 +20,7 @@ export class RelayerService {
   constructor(
     private readonly configService: ApiConfigService,
     private readonly paymasterServer: PaymasterService,
+    private readonly redisCacheService: RedisCacheService,
   ) {
     this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
   }
@@ -31,9 +33,7 @@ export class RelayerService {
 
     const innerTx = TransactionUtils.convertObjectToTransaction(paymasterTx);
 
-    const relayerAddress = this.configService.getRelayerAddress();
-    const relayerNonce = await this.getNonce(relayerAddress);
-
+    const relayerNonce = await this.getNonce();
     const relayedTxV2 = await this.buildRelayedTx(innerTx, paymasterTxData.gasLimit, relayerNonce);
     const relayerSignature = await this.signRelayedTx(relayedTxV2);
 
@@ -90,9 +90,41 @@ export class RelayerService {
     return txHash;
   }
 
-  async getNonce(address: string): Promise<number> {
+  async getNonce(): Promise<number> {
+    let attempts = 0;
+    const MAX_ATTEMPTS = 5;
+    const relayerAddress = this.configService.getRelayerAddress();
+
+    while (attempts <= MAX_ATTEMPTS) {
+      try {
+        const nonce = await this.getNonceRaw(relayerAddress);
+        return nonce;
+      } catch (error) {
+        attempts++;
+        this.logger.warn(`Attempt ${attempts} for getNonce failed: ${error}`);
+      }
+    }
+    throw new Error('Could not fetch account nonce');
+  }
+
+  async getNonceRaw(address: string): Promise<number> {
     const account = await this.networkProvider.getAccount(new Address(address));
-    return account.nonce;
+
+    const redisLock = await this.redisCacheService.setnx(CacheInfo.RelayerNonce.key, account.nonce);
+
+    if (redisLock) {
+      await this.redisCacheService.expire(CacheInfo.RelayerNonce.key, CacheInfo.RelayerNonce.ttl);
+      return account.nonce;
+    }
+
+    const newNonce = await this.redisCacheService.increment(CacheInfo.RelayerNonce.key);
+    if (account.nonce > newNonce) {
+      await this.redisCacheService.delete(CacheInfo.RelayerNonce.key);
+
+      throw new Error('Stale nonce. Out of sync state');
+    }
+
+    return newNonce;
   }
 
   async getNetworkConfig(): Promise<NetworkConfig> {

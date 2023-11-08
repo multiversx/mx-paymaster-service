@@ -14,6 +14,7 @@ import { PaymasterService } from "../endpoints/paymaster/paymaster.service";
     ScheduleModule.forRoot(),
     ApiConfigModule.forRoot(configuration),
     DynamicModuleUtils.getCachingModule(configuration),
+    DynamicModuleUtils.getRedisModule(configuration),
     TokenModule,
     RelayerModule,
   ],

@@ -53,3 +53,24 @@ tokens:
       swapParameters: 'swapTokensFixedInput@WEGLD-a28c59@01'
       swapMinAmount: '1000000000000'
       swapGasLimit: 12050000
+  - WEGLD-a28c59:
+      feePercentage: 5
+      feeAmount: '0'
+      swapContract: 'erd1qqqqqqqqqqqqqpgqqkwzsxkjc83vlfex9dmznwm7tjvxlqqkpauqx0n782'
+      swapParameters: 'unwrapEgld'
+      swapMinAmount: '1000000000000'
+      swapGasLimit: 4200000
+  - ASH-e3d1b7:
+      feePercentage: 5
+      feeAmount: '1000000'
+      swapContract: 'erd1qqqqqqqqqqqqqpgq0e9pmlzr0nk5nkulzcmessttsjkzr4xf0n4sue4r8e'
+      swapParameters: 'swapTokensFixedInput@WEGLD-a28c59@01'
+      swapMinAmount: '1000000000000'
+      swapGasLimit: 12050000
+  - ITHEUM-fce905:
+      feePercentage: 5
+      feeAmount: '1000000'
+      swapContract: 'erd1qqqqqqqqqqqqqpgqus9r9gwtg24a9fvzv743hgydecpkxs8q0n4szz2az0'
+      swapParameters: 'swapTokensFixedInput@WEGLD-a28c59@01'
+      swapMinAmount: '1000000000000'
+      swapGasLimit: 12050000

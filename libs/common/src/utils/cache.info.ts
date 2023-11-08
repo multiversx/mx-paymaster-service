@@ -36,4 +36,16 @@ export class CacheInfo {
       ttl: Constants.oneSecond() * 1,
     };
   }
+
+  // static RelayerNonce(nonce: number): CacheInfo {
+  //   return {
+  //     key: `relayerNonce:${nonce.toString()}`,
+  //     ttl: Constants.oneHour(),
+  //   };
+  // }
+
+  static RelayerNonce: CacheInfo = {
+    key: `relayerNonce`,
+    ttl: Constants.oneMinute() * 5,
+  };
 }
