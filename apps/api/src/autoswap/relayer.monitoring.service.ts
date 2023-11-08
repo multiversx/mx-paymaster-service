@@ -23,6 +23,8 @@ export class RelayerMonitoringService {
       try {
         const tokensToBeSwapped = await this.swapService.getSwappableTokens();
         if (tokensToBeSwapped.length === 0) {
+          await this.swapService.executeUnwrap();
+
           return;
         }
 
@@ -55,13 +57,15 @@ export class RelayerMonitoringService {
         }));
 
         if (result.error) {
-          console.log(`Unused nonce ${result.nonce} - needs gap TX`);
+          this.logger.warn(`Unused nonce ${result.nonce} - needs gap TX`);
         }
 
         const confirmationPromises = successfulTxs.map(elem => this.swapService.confirmTxSettled(elem));
         await Promise.all(confirmationPromises);
 
-        console.log('Stop autoswap sequence');
+        await this.swapService.executeUnwrap();
+
+        this.logger.log('End autoswap sequence');
       } catch (error) {
         this.logger.error(error);
       }

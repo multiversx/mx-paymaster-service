@@ -66,6 +66,52 @@ export class SwapService {
     }
   }
 
+  async getUnwrapSwap(): Promise<TokenSwap | undefined> {
+    const wrappedEgldIdentifier = this.configService.getWrappedEGLDIdentifier();
+    const wrappedEgld = this.tokens.find((token) => token.identifier === wrappedEgldIdentifier);
+
+    if (!wrappedEgld || !wrappedEgld.swapContract || !wrappedEgld.swapMinAmount ||
+      !wrappedEgld.swapGasLimit || !wrappedEgld.swapParameters) {
+      return undefined;
+    }
+
+    const relayerAddress = this.configService.getRelayerAddress();
+    const url = `accounts/${relayerAddress}/tokens/${wrappedEgldIdentifier}`;
+
+    try {
+      const accountWrappedEgld = await this.networkProvider.doGetGeneric(url);
+      const swapThreshold = BigNumber(wrappedEgld.swapMinAmount ?? 0);
+
+      if (BigNumber(accountWrappedEgld.balance).lt(swapThreshold)) {
+        return undefined;
+      }
+
+      return {
+        identifier: wrappedEgldIdentifier,
+        swapContract: wrappedEgld.swapContract,
+        swapParameters: wrappedEgld.swapParameters,
+        swapGasLimit: wrappedEgld?.swapGasLimit,
+        amount: accountWrappedEgld.balance,
+      };
+    } catch (error) {
+      // this.logger.error('Could not get relayer Wrapped EGLD balance',);
+      return undefined;
+    }
+  }
+
+  async executeUnwrap() {
+    const unwrapSwap = await this.getUnwrapSwap();
+    if (!unwrapSwap) {
+      return;
+    }
+
+    const nonce = await this.relayerService.getNonce();
+
+    // TODO wrap in try catch to see if gap tx needed
+    const unwrapTx = await this.buildAndBroadcastSwapTx(unwrapSwap, nonce);
+    await this.confirmTxSettled(unwrapTx);
+  }
+
   async buildTransaction(tokenSwap: TokenSwap, nonce: number,): Promise<Transaction> {
     const networkConfig = await this.getNetworkConfig();
     const relayerAddress = this.configService.getRelayerAddress();
