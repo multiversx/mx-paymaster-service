@@ -8,6 +8,7 @@ import { TokenSwap } from "./entities/token.swap";
 import { Address, ITransactionOnNetwork, Transaction, TransactionPayload, TransactionWatcher } from "@multiversx/sdk-core/out";
 import { RelayerService } from "../endpoints/relayer/relayer.service";
 import { TransactionUtils } from "../endpoints/paymaster/transaction.utils";
+import { RedlockService } from "@mvx-monorepo/common/redlock";
 
 @Injectable()
 export class SwapService {
@@ -20,7 +21,8 @@ export class SwapService {
   constructor(
     private readonly configService: ApiConfigService,
     private readonly tokenService: TokenService,
-    private readonly relayerService: RelayerService
+    private readonly relayerService: RelayerService,
+    private readonly redlockService: RedlockService
   ) {
     this.logger = new Logger(SwapService.name);
 
@@ -99,16 +101,17 @@ export class SwapService {
     }
   }
 
-  async executeUnwrap() {
+  async executeUnwrap(): Promise<void | undefined> {
     const unwrapSwap = await this.getUnwrapSwap();
     if (!unwrapSwap) {
       return;
     }
 
-    const nonce = await this.relayerService.getNonce();
+    const unwrapTx = await this.buildAndBroadcastSwapTx(unwrapSwap);
+    if (!unwrapTx) {
+      return;
+    }
 
-    // TODO wrap in try catch to see if gap tx needed
-    const unwrapTx = await this.buildAndBroadcastSwapTx(unwrapSwap, nonce);
     await this.confirmTxSettled(unwrapTx);
   }
 
@@ -124,60 +127,71 @@ export class SwapService {
       sender: new Address(relayerAddress),
       chainID: networkConfig.ChainID,
       gasLimit: tokenSwap.swapGasLimit,
-      // gasPrice: 1000000000,
       gasPrice: networkConfig.MinGasPrice,
       data: TransactionPayload.fromEncoded(TransactionUtils.encodeTransactionData(payload)),
     });
 
-    const relayerSignature = await this.relayerService.signRelayedTx(transaction);
+    const relayerSignature = await this.relayerService.signTx(transaction);
     transaction.applySignature(relayerSignature);
 
     return transaction;
   }
 
-  async buildAndBroadcastSwapTx(swapParams: TokenSwap, nonce: number): Promise<Transaction> {
+  async buildAndBroadcastSwapTx(swapParams: TokenSwap): Promise<Transaction | undefined> {
     this.logger.log(`Start swap sequence for token ${swapParams.identifier}`);
 
-    console.log(`Current nonce ${nonce}`);
-
-    const transaction = await this.buildTransaction(swapParams, nonce);
+    const lockKey = this.relayerService.getBroadcastTxLockKey();
     try {
+      const lockAquired = await this.redlockService.tryLockResource(lockKey, this.configService.getRedlockConfiguration());
+      if (!lockAquired) {
+        throw new Error('Could not acquire lock for buildAndBroadcastSwapTx');
+      }
+
+      const nonce = await this.relayerService.getNonce();
+      console.log(`Current nonce ${nonce}`);
+
+      const transaction = await this.buildTransaction(swapParams, nonce);
       const hash = await this.broadcastTransaction(transaction);
-      this.logger.log(`Successfuly broadcasted swap tx ${hash}`);
+
+      if (!hash) {
+        throw new Error(`Could not broadcast swap ${swapParams.identifier} transaction`);
+      }
+
+      await this.relayerService.incremenetNonce();
+      this.logger.log(`Successful broadcast of swap tx ${hash}`);
 
       return transaction;
     } catch (error) {
-      this.logger.error(`Swap failed for token ${swapParams.identifier}`);
       this.logger.error(error);
-
-      throw new Error(`Broadcast failed for swap ${swapParams.identifier} transaction`);
+      return;
+    } finally {
+      await this.redlockService.release(lockKey);
     }
   }
 
-  async broadcastTransaction(transaction: Transaction, attempts: number = 0) {
-    const MAX_ATTEMPTS = 5;
-    while (attempts <= MAX_ATTEMPTS) {
+  async broadcastTransaction(transaction: Transaction, maxAttempts: number = 5): Promise<string | undefined> {
+    let attempts = 0;
+    while (attempts <= maxAttempts) {
       try {
         const hash = await this.networkProvider.sendTransaction(transaction);
 
         return hash;
       } catch (error) {
         attempts++;
-        this.logger.log(`Broadcast attempt ${attempts} failed: ${error}`);
+        this.logger.warn(`Broadcast attempt ${attempts} failed: ${error}`);
 
         await this.sleep(700);
       }
     }
 
-    throw new Error(`Broadcast failed for tx ${transaction.getHash().hex()}`);
+    return;
   }
 
-  async confirmTxSettled(transaction: Transaction): Promise<ITransactionOnNetwork> {
+  async confirmTxSettled(transaction: Transaction, maxAttempts: number = 30): Promise<ITransactionOnNetwork | undefined> {
     const watcher = this.getTransactionWatcher();
-    const MAX_ATTEMPTS = 30;
     let attempts = 0;
 
-    while (attempts <= MAX_ATTEMPTS) {
+    while (attempts <= maxAttempts) {
       try {
         const txOnNetwork = await watcher.awaitCompleted(transaction);
         this.logger.log(`Swap confirmed for transaction ${txOnNetwork.hash}`);
@@ -191,7 +205,8 @@ export class SwapService {
       }
     }
 
-    throw new Error(`Transaction ${transaction.getHash().hex()} could not be confirmed`);
+    this.logger.error(`Swap transaction ${transaction.getHash().hex()} could not be confirmed`);
+    return;
   }
 
   async getNetworkConfig(): Promise<NetworkConfig> {

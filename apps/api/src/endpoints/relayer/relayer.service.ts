@@ -45,7 +45,7 @@ export class RelayerService {
       const relayerNonce = await this.getNonce();
       const relayedTxV2 = await this.buildRelayedTx(innerTx, paymasterTxData.gasLimit, relayerNonce);
 
-      const relayerSignature = await this.signRelayedTx(relayedTxV2);
+      const relayerSignature = await this.signTx(relayedTxV2);
       relayedTxV2.applySignature(relayerSignature);
 
       const hash = await this.broadcastRelayedTx(relayedTxV2);
@@ -54,7 +54,7 @@ export class RelayerService {
       }
 
       await this.incremenetNonce();
-      this.logger.log(`Succesful broadcast of relayed tx ${hash}`);
+      this.logger.log(`Successful broadcast of relayed tx ${hash}`);
       return relayedTxV2;
     } finally {
       await this.redlockService.release(lockKey);
@@ -82,8 +82,7 @@ export class RelayerService {
     }
   }
 
-  // todo: rename to signTx
-  async signRelayedTx(transaction: Transaction): Promise<Buffer> {
+  async signTx(transaction: Transaction): Promise<Buffer> {
     if (!this.relayerSigner) {
       await this.loadWallet();
     }
@@ -104,10 +103,9 @@ export class RelayerService {
     }
   }
 
-  async broadcastRelayedTx(transaction: Transaction): Promise<string | undefined> {
-    const MAX_ATTEMPTS = 5;
+  async broadcastRelayedTx(transaction: Transaction, maxAttempts: number = 5): Promise<string | undefined> {
     let attempts = 0;
-    while (attempts <= MAX_ATTEMPTS) {
+    while (attempts <= maxAttempts) {
       try {
         const hash = await this.networkProvider.sendTransaction(transaction);
         return hash;
@@ -122,12 +120,11 @@ export class RelayerService {
     return;
   }
 
-  async getNonce(): Promise<number> {
+  async getNonce(maxAttempts: number = 5): Promise<number> {
     let attempts = 0;
-    const MAX_ATTEMPTS = 5;
     const relayerAddress = this.configService.getRelayerAddress();
 
-    while (attempts <= MAX_ATTEMPTS) {
+    while (attempts <= maxAttempts) {
       try {
         const nonce = await this.getNonceRaw(relayerAddress);
         return nonce;

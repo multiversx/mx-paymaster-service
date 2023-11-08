@@ -8,6 +8,7 @@ import { SwapService } from "./swap.service";
 import { RelayerService } from "../endpoints/relayer/relayer.service";
 import { RelayerModule } from "../endpoints/relayer/relayer.module";
 import { PaymasterService } from "../endpoints/paymaster/paymaster.service";
+import { RedlockModule } from "@mvx-monorepo/common/redlock";
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { PaymasterService } from "../endpoints/paymaster/paymaster.service";
     ApiConfigModule.forRoot(configuration),
     DynamicModuleUtils.getCachingModule(configuration),
     DynamicModuleUtils.getRedisModule(configuration),
+    RedlockModule.register(configuration),
     TokenModule,
     RelayerModule,
   ],

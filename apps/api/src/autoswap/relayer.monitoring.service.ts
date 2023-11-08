@@ -2,8 +2,6 @@ import { Locker } from "@multiversx/sdk-nestjs-common";
 import { Injectable, Logger } from "@nestjs/common";
 import { Cron } from "@nestjs/schedule";
 import { SwapService } from "./swap.service";
-import { TokenSwap } from "./entities/token.swap";
-import { RelayerService } from "../endpoints/relayer/relayer.service";
 import { Transaction } from "@multiversx/sdk-core/out";
 
 @Injectable()
@@ -12,7 +10,6 @@ export class RelayerMonitoringService {
 
   constructor(
     private readonly swapService: SwapService,
-    private readonly relayerService: RelayerService
   ) {
     this.logger = new Logger(RelayerMonitoringService.name);
   }
@@ -28,37 +25,10 @@ export class RelayerMonitoringService {
           return;
         }
 
-        let nonce = await this.relayerService.getNonce();
-        const successfulTxs: Transaction[] = [];
+        const swapPromises = tokensToBeSwapped.map(token => this.swapService.buildAndBroadcastSwapTx(token));
+        const swapTxs = await Promise.all(swapPromises);
 
-        const reduceSwapTxs = async (previous: any, tokenSwap: TokenSwap) => {
-          const previousResult = await previous;
-          if (!previousResult.error) {
-            nonce = await this.relayerService.getNonce();
-          }
-          try {
-            const result = await this.swapService.buildAndBroadcastSwapTx(tokenSwap, nonce);
-            successfulTxs.push(result);
-
-            return {
-              error: false,
-            };
-          } catch (error) {
-            console.log('got error - will not increment nonce');
-            return {
-              error: true,
-              nonce: nonce,
-            };
-          }
-        };
-        const result = await tokensToBeSwapped.reduce(reduceSwapTxs, Promise.resolve({
-          error: true,
-          nonce: null,
-        }));
-
-        if (result.error) {
-          this.logger.warn(`Unused nonce ${result.nonce} - needs gap TX`);
-        }
+        const successfulTxs = swapTxs.filter((tx: Transaction | undefined) => tx) as Transaction[];
 
         const confirmationPromises = successfulTxs.map(elem => this.swapService.confirmTxSettled(elem));
         await Promise.all(confirmationPromises);
