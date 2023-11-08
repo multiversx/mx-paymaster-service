@@ -34,6 +34,10 @@ keepAliveTimeout:
   downstream: 61000
   upstream: 60000
 useCachingInterceptor: false
+redlock:
+  keyExpiration: 60000
+  maxRetries: 50
+  retryInterval: 1000
 paymaster:
   contractAddress: 'erd1qqqqqqqqqqqqqpgqvfnt8jj0e5808lk3557dgzs6twcne5083hvqetsaqp'
   gasLimit: 10000000

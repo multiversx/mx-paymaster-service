@@ -354,9 +354,9 @@ export class ApiConfigService {
   }
 
   getRedlockConfiguration(): RedlockConfiguration {
-    const keyExpiration = Number(process.env.REDLOCK_KEY_EXPIRATION || 60000);
-    const maxRetries = Number(process.env.REDLOCK_MAX_RETRIES || 50);
-    const retryInterval = Number(process.env.REDLOCK_RETRY_INTERVAL || 1000);
+    const keyExpiration = this.configService.get<number>('redlock.keyExpiration') ?? 60000;
+    const maxRetries = this.configService.get<number>('redlock.maxRetries') ?? 50;
+    const retryInterval = this.configService.get<number>('redlock.retryInterval') ?? 1000;
 
     return {
       keyExpiration,
