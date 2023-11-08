@@ -30,10 +30,10 @@ export class CacheInfo {
     ttl: Constants.oneSecond() * 15,
   };
 
-  static AccountNonce(address: string): CacheInfo {
+  static RelayerNonce(address: string): CacheInfo {
     return {
-      key: `accountNonce:${address}`,
-      ttl: Constants.oneSecond() * 1,
+      key: `relayerNonce:${address}`,
+      ttl: Constants.oneSecond() * 30,
     };
   }
 

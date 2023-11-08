@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { RedlockConfiguration } from "../redlock";
 
 @Injectable()
 export class ApiConfigService {
@@ -350,5 +351,17 @@ export class ApiConfigService {
     }
 
     return cronScheduleExpression;
+  }
+
+  getRedlockConfiguration(): RedlockConfiguration {
+    const keyExpiration = Number(process.env.REDLOCK_KEY_EXPIRATION || 60000);
+    const maxRetries = Number(process.env.REDLOCK_MAX_RETRIES || 50);
+    const retryInterval = Number(process.env.REDLOCK_RETRY_INTERVAL || 1000);
+
+    return {
+      keyExpiration,
+      maxRetries,
+      retryInterval,
+    };
   }
 }
