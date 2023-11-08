@@ -37,13 +37,7 @@ export class RelayerController {
   })
   @ApiOkResponse({ type: Transaction })
   async generateTransaction(@Body() request: GenerateRelayedTxDto): Promise<Transaction> {
-
     const tx = await this.relayerService.generateRelayedTx(request.transaction);
-
-    if (request.shouldSubmit) {
-      await this.relayerService.broadcastRelayedTx(tx);
-    }
-
     return tx;
   }
 }
