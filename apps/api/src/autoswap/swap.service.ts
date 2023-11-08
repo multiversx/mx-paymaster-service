@@ -124,7 +124,8 @@ export class SwapService {
       sender: new Address(relayerAddress),
       chainID: networkConfig.ChainID,
       gasLimit: tokenSwap.swapGasLimit,
-      gasPrice: 1000000000,
+      // gasPrice: 1000000000,
+      gasPrice: networkConfig.MinGasPrice,
       data: TransactionPayload.fromEncoded(TransactionUtils.encodeTransactionData(payload)),
     });
 
