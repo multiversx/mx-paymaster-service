@@ -33,7 +33,7 @@ export class CacheInfo {
   static RelayerNonce(address: string): CacheInfo {
     return {
       key: `relayerNonce:${address}`,
-      ttl: Constants.oneSecond() * 30,
+      ttl: Constants.oneSecond() * 10,
     };
   }
 }

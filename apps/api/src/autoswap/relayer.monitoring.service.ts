@@ -25,7 +25,7 @@ export class RelayerMonitoringService {
           return;
         }
 
-        const swapPromises = tokensToBeSwapped.map(token => this.swapService.buildAndBroadcastSwapTx(token));
+        const swapPromises = tokensToBeSwapped.map(token => this.swapService.generateSwapTx(token));
         const swapTxs = await Promise.all(swapPromises);
 
         const successfulTxs = swapTxs.filter((tx: Transaction | undefined) => tx) as Transaction[];

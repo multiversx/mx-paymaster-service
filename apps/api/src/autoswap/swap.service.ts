@@ -8,7 +8,6 @@ import { TokenSwap } from "./entities/token.swap";
 import { Address, ITransactionOnNetwork, Transaction, TransactionPayload, TransactionWatcher } from "@multiversx/sdk-core/out";
 import { RelayerService } from "../endpoints/relayer/relayer.service";
 import { TransactionUtils } from "../endpoints/paymaster/transaction.utils";
-import { RedlockService } from "@mvx-monorepo/common/redlock";
 
 @Injectable()
 export class SwapService {
@@ -22,7 +21,6 @@ export class SwapService {
     private readonly configService: ApiConfigService,
     private readonly tokenService: TokenService,
     private readonly relayerService: RelayerService,
-    private readonly redlockService: RedlockService
   ) {
     this.logger = new Logger(SwapService.name);
 
@@ -63,7 +61,7 @@ export class SwapService {
         };
       });
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error(`Get relayer token balance request failed with error: ${error}`);
       throw new Error('Fetch relayer token balance request failed.');
     }
   }
@@ -96,8 +94,7 @@ export class SwapService {
         amount: accountWrappedEgld.balance,
       };
     } catch (error) {
-      // this.logger.error('Could not get relayer Wrapped EGLD balance',);
-      return undefined;
+      return;
     }
   }
 
@@ -107,7 +104,7 @@ export class SwapService {
       return;
     }
 
-    const unwrapTx = await this.buildAndBroadcastSwapTx(unwrapSwap);
+    const unwrapTx = await this.generateSwapTx(unwrapSwap);
     if (!unwrapTx) {
       return;
     }
@@ -131,60 +128,22 @@ export class SwapService {
       data: TransactionPayload.fromEncoded(TransactionUtils.encodeTransactionData(payload)),
     });
 
-    const relayerSignature = await this.relayerService.signTx(transaction);
-    transaction.applySignature(relayerSignature);
-
     return transaction;
   }
 
-  async buildAndBroadcastSwapTx(swapParams: TokenSwap): Promise<Transaction | undefined> {
-    this.logger.log(`Start swap sequence for token ${swapParams.identifier}`);
-
-    const lockKey = this.relayerService.getBroadcastTxLockKey();
+  async generateSwapTx(swapParams: TokenSwap): Promise<Transaction | undefined> {
     try {
-      const lockAquired = await this.redlockService.tryLockResource(lockKey, this.configService.getRedlockConfiguration());
-      if (!lockAquired) {
-        throw new Error('Could not acquire lock for buildAndBroadcastSwapTx');
-      }
+      // 0 - dummy nonce
+      const transaction = await this.buildTransaction(swapParams, 0);
+      this.logger.log(
+        `Start swap sequence for token ${swapParams.identifier}`
+      );
 
-      const nonce = await this.relayerService.getNonce();
-      console.log(`Current nonce ${nonce}`);
-
-      const transaction = await this.buildTransaction(swapParams, nonce);
-      const hash = await this.broadcastTransaction(transaction);
-
-      if (!hash) {
-        throw new Error(`Could not broadcast swap ${swapParams.identifier} transaction`);
-      }
-
-      await this.relayerService.incremenetNonce();
-      this.logger.log(`Successful broadcast of swap tx ${hash}`);
-
-      return transaction;
+      return await this.relayerService.signAndBroadcastTransaction(transaction);
     } catch (error) {
-      this.logger.error(error);
+      this.logger.error(`Swap transaction for ${swapParams.identifier} failed with error: ${error}`);
       return;
-    } finally {
-      await this.redlockService.release(lockKey);
     }
-  }
-
-  async broadcastTransaction(transaction: Transaction, maxAttempts: number = 5): Promise<string | undefined> {
-    let attempts = 0;
-    while (attempts <= maxAttempts) {
-      try {
-        const hash = await this.networkProvider.sendTransaction(transaction);
-
-        return hash;
-      } catch (error) {
-        attempts++;
-        this.logger.warn(`Broadcast attempt ${attempts} failed: ${error}`);
-
-        await this.sleep(700);
-      }
-    }
-
-    return;
   }
 
   async confirmTxSettled(transaction: Transaction, maxAttempts: number = 30): Promise<ITransactionOnNetwork | undefined> {

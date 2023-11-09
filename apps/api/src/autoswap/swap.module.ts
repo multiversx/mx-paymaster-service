@@ -14,9 +14,8 @@ import { RedlockModule } from "@mvx-monorepo/common/redlock";
   imports: [
     ScheduleModule.forRoot(),
     ApiConfigModule.forRoot(configuration),
-    DynamicModuleUtils.getCachingModule(configuration),
-    DynamicModuleUtils.getRedisModule(configuration),
     RedlockModule.register(configuration),
+    DynamicModuleUtils.getRedisModule(configuration),
     TokenModule,
     RelayerModule,
   ],
