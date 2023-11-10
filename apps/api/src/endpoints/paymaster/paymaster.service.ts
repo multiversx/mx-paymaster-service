@@ -104,6 +104,8 @@ export class PaymasterService {
       ...existingTransfers,
     ];
     const transaction = this.buildPaymasterTx(txDetails, contract, typedArguments, multiTransfer, 0);
+    transaction.setVersion(txDetails.version ?? 1);
+    transaction.setOptions(0);
 
     await this.setCachedTxData(transaction, gasLimit);
 

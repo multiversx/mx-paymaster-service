@@ -39,10 +39,10 @@ export class TransactionDetails implements IPlainTransactionObject {
   value: string = '';
 
   @ApiProperty()
-  version: number = 0;
+  version: number = 1;
 
   @ApiProperty()
-  options?: number;
+  options?: number = 0;
 
   @ApiProperty()
   guardian?: string;

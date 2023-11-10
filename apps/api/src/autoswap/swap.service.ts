@@ -146,7 +146,7 @@ export class SwapService {
     }
   }
 
-  async confirmTxSettled(transaction: Transaction, maxAttempts: number = 30): Promise<ITransactionOnNetwork | undefined> {
+  async confirmTxSettled(transaction: Transaction, maxAttempts: number = 10): Promise<ITransactionOnNetwork | undefined> {
     const watcher = this.getTransactionWatcher();
     let attempts = 0;
 
