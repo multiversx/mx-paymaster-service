@@ -165,7 +165,7 @@ export class RelayerService {
   async getNonceRaw(address: string): Promise<number> {
     const account = await this.networkProvider.getAccount(new Address(address));
 
-    if (!account || !account.nonce) {
+    if (!account) {
       throw new Error('Could not fetch account data');
     }
 
