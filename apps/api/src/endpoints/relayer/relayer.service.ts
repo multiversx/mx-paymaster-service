@@ -71,7 +71,7 @@ export class RelayerService {
         transaction.applySignature(relayerSignature);
 
         const hash = await this.broadcastTransaction(transaction);
-        this.logger.log(`Successful broadcast of transaction ${hash}`);
+        this.logger.log(`Successful broadcast of transaction ${hash} with nonce ${transaction.getNonce().valueOf()}`);
 
         await this.incrementNonce();
 
@@ -85,8 +85,6 @@ export class RelayerService {
           this.logger.warn(`Transaction broadcast failed due to a stale nonce. Deleting cached value.`);
           await this.clearCachedNonce();
         }
-
-        await this.sleep(500);
       } finally {
         await this.redlockService.release(lockKey);
       }
@@ -103,7 +101,6 @@ export class RelayerService {
       const relayedTxV2 = builder
         .setInnerTransaction(innerTx)
         .setInnerTransactionGasLimit(gasLimit)
-        // .setRelayerNonce(nonce)
         .setNetworkConfig(networkConfig)
         .setRelayerAddress(new Address(this.relayerAddress))
         .build();
@@ -190,6 +187,7 @@ export class RelayerService {
         return;
       }
 
+      await this.redisCacheService.expire(CacheInfo.RelayerNonce(this.relayerAddress).key, CacheInfo.RelayerNonce(this.relayerAddress).ttl);
       return incrementedNonce;
     } catch (error) {
       return;
@@ -224,10 +222,6 @@ export class RelayerService {
 
       throw new Error('Error when loading network config');
     }
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, Number(ms)));
   }
 
   private isNonceTransactionError(error: string): boolean {
