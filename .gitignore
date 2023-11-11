@@ -37,3 +37,4 @@ lerna-debug.log*
 # Configs
 **/*/config/config.yaml
 **/*/config/config.custom.yaml
+apps/api/src/wallets/

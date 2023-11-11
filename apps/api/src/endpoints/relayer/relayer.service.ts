@@ -73,7 +73,7 @@ export class RelayerService {
         const hash = await this.broadcastTransaction(transaction);
         this.logger.log(`Successful broadcast of transaction ${hash} with nonce ${transaction.getNonce().valueOf()}`);
 
-        await this.incrementNonce();
+        await this.incrementNonce(nonce);
 
         return transaction;
       } catch (error: any) {
@@ -145,14 +145,22 @@ export class RelayerService {
 
   async getNonce(maxAttempts: number = 5): Promise<number> {
     const redisNonce = await this.redisCacheService.get<number>(CacheInfo.RelayerNonce(this.relayerAddress).key);
-    if (redisNonce) {
+    if (typeof redisNonce !== 'undefined') {
       return redisNonce;
     }
 
     let attempts = 0;
     while (attempts <= maxAttempts) {
       try {
-        return await this.getNonceRaw(this.relayerAddress);
+        const nonce = await this.getNonceRaw(this.relayerAddress);
+
+        await this.redisCacheService.set(
+          CacheInfo.RelayerNonce(this.relayerAddress).key,
+          nonce,
+          CacheInfo.RelayerNonce(this.relayerAddress).ttl
+        );
+
+        return nonce;
       } catch (error) {
         attempts++;
         this.logger.warn(`Attempt ${attempts} for getNonce failed: ${error}`);
@@ -169,25 +177,21 @@ export class RelayerService {
       throw new Error('Could not fetch account data');
     }
 
-    await this.redisCacheService.set(
-      CacheInfo.RelayerNonce(address).key,
-      account.nonce,
-      CacheInfo.RelayerNonce(address).ttl
-    );
-
     return account.nonce;
   }
 
-  async incrementNonce(): Promise<number | undefined> {
+  async incrementNonce(currentNonce: number): Promise<number | undefined> {
     try {
-      const incrementedNonce = await this.redisCacheService.increment(CacheInfo.RelayerNonce(this.relayerAddress).key);
+      const incrementedNonce = await this.redisCacheService.increment(
+        CacheInfo.RelayerNonce(this.relayerAddress).key,
+        CacheInfo.RelayerNonce(this.relayerAddress).ttl
+      );
 
-      if (incrementedNonce === 1) {
+      if (currentNonce > 0 && incrementedNonce === 1) {
         await this.clearCachedNonce();
         return;
       }
 
-      await this.redisCacheService.expire(CacheInfo.RelayerNonce(this.relayerAddress).key, CacheInfo.RelayerNonce(this.relayerAddress).ttl);
       return incrementedNonce;
     } catch (error) {
       return;
