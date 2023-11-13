@@ -9,4 +9,16 @@ export class TokenConfig {
 
   @ApiProperty()
   feeAmount: string = '';
+
+  @ApiProperty()
+  swapContract?: string;
+
+  @ApiProperty()
+  swapParameters?: string;
+
+  @ApiProperty()
+  swapMinAmount?: string;
+
+  @ApiProperty()
+  swapGasLimit?: number;
 }

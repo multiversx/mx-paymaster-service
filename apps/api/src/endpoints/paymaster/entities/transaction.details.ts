@@ -7,19 +7,22 @@ export class TransactionDetails implements IPlainTransactionObject {
   @IsNotEmpty()
   chainID: string = '';
 
-  @ApiProperty({ default: undefined, required: false })
-  @IsOptional()
+  @ApiProperty()
+  @IsNotEmpty()
   data?: string;
 
   @ApiProperty()
+  @IsNotEmpty()
   @IsInt()
   gasLimit: number = 0;
 
   @ApiProperty()
+  @IsNotEmpty()
   @IsInt()
   gasPrice: number = 0;
 
   @ApiProperty()
+  @IsNotEmpty()
   @IsInt()
   nonce: number = 0;
 
@@ -36,17 +39,14 @@ export class TransactionDetails implements IPlainTransactionObject {
   signature?: string = '';
 
   @ApiProperty()
+  @IsNotEmpty()
   value: string = '';
 
   @ApiProperty()
-  version: number = 0;
+  @IsOptional()
+  version: number = 1;
 
   @ApiProperty()
-  options?: number;
-
-  @ApiProperty()
-  guardian?: string;
-
-  @ApiProperty()
-  guardianSignature?: string;
+  @IsOptional()
+  options?: number = 0;
 }

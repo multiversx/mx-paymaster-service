@@ -1,7 +1,8 @@
 import { TransactionDecoder, TransactionMetadata } from "@multiversx/sdk-transaction-decoder/lib/src/transaction.decoder";
 import { TransactionDetails } from "./entities/transaction.details";
-import { TokenTransfer, Transaction } from "@multiversx/sdk-core/out";
+import { Address, TokenTransfer, Transaction } from "@multiversx/sdk-core/out";
 import BigNumber from "bignumber.js";
+import { BinaryUtils } from "@multiversx/sdk-nestjs-common";
 
 export class TransactionUtils {
   static extractMetadata(txDetails: TransactionDetails): TransactionMetadata {
@@ -31,9 +32,18 @@ export class TransactionUtils {
 
       if (element.properties?.collection && element.properties.identifier) {
         const nonce = element.properties.identifier?.split('-')[2];
-        return TokenTransfer.nonFungible(
+        const valueBigNum = new BigNumber(element.value.toString());
+        if (valueBigNum.isEqualTo(BigNumber(1))) {
+          return TokenTransfer.nonFungible(
+            element.properties.collection,
+            parseInt(nonce, 16)
+          );
+        }
+
+        return TokenTransfer.metaEsdtFromBigInteger(
           element.properties.collection,
-          parseInt(nonce, 16)
+          parseInt(nonce, 16),
+          valueBigNum
         );
       }
 
@@ -66,5 +76,48 @@ export class TransactionUtils {
       version: plainTx.version ?? 1,
     });
     return transaction;
+  }
+
+  static encodeTransactionData(data: string): string {
+    const delimiter = '@';
+
+    const args = data.split(delimiter);
+
+    let encoded = args.shift();
+    for (const arg of args) {
+      encoded += delimiter;
+
+      const address = TransactionUtils.encodeAddress(arg);
+      if (address !== undefined) {
+        encoded += address;
+      } else {
+        const bigNumber = TransactionUtils.decodeBigNumber(arg);
+        if (bigNumber !== undefined) {
+          const hex = bigNumber.toString(16);
+          encoded += hex.length % 2 === 1 ? '0' + hex : hex;
+        } else {
+          encoded += Buffer.from(arg).toString('hex');
+        }
+      }
+    }
+
+    return BinaryUtils.base64Encode(encoded ?? '');
+  }
+
+  static encodeAddress(str: string): string | undefined {
+    try {
+      return new Address(str).hex();
+    } catch {
+      return undefined;
+    }
+  }
+
+  static decodeBigNumber(bignumber: string) {
+    try {
+      const bigNumber = new BigNumber(bignumber);
+      return bigNumber.isPositive() ? bigNumber : undefined;
+    } catch (error) {
+      return undefined;
+    }
   }
 }

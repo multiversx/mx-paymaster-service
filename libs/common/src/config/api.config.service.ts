@@ -312,13 +312,8 @@ export class ApiConfigService {
     return pemFilePath;
   }
 
-  getRelayerEGLDFee(): string {
-    const relayerFee = this.configService.get<string>('relayer.flatFeeEGLD');
-    if (relayerFee === undefined) {
-      throw new Error('No relayer fee present');
-    }
-
-    return relayerFee;
+  getRelayerName(): string | undefined {
+    return this.configService.get<string>('relayer.name');
   }
 
   getAcceptedTokens(): any[] {
@@ -335,10 +330,28 @@ export class ApiConfigService {
     return identifier;
   }
 
+  getIsAutoSwapFeatureActive(): boolean {
+    const isAutoSwapActive = this.configService.get<boolean>('features.swap.enabled');
+    if (isAutoSwapActive === undefined) {
+      throw new Error('No auto swap feature flag present');
+    }
+
+    return isAutoSwapActive;
+  }
+
+  getAutoSwapCronSchedule(): string {
+    const cronScheduleExpression = this.configService.get<string>('features.swap.cron');
+    if (cronScheduleExpression === undefined) {
+      throw new Error('No auto swap cron expression present');
+    }
+
+    return cronScheduleExpression;
+  }
+
   getRedlockConfiguration(): RedlockConfiguration {
-    const keyExpiration = Number(process.env.REDLOCK_KEY_EXPIRATION || 60000);
-    const maxRetries = Number(process.env.REDLOCK_MAX_RETRIES || 50);
-    const retryInterval = Number(process.env.REDLOCK_RETRY_INTERVAL || 1000);
+    const keyExpiration = this.configService.get<number>('redlock.keyExpiration') ?? 60000;
+    const maxRetries = this.configService.get<number>('redlock.maxRetries') ?? 50;
+    const retryInterval = this.configService.get<number>('redlock.retryInterval') ?? 1000;
 
     return {
       keyExpiration,

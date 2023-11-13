@@ -17,14 +17,16 @@ export class RelayerService {
   private readonly networkProvider: ApiNetworkProvider;
   private relayerSigner!: UserSigner;
   private networkConfig: NetworkConfig | undefined = undefined;
+  private relayerAddress: string;
 
   constructor(
     private readonly configService: ApiConfigService,
     private readonly paymasterServer: PaymasterService,
     private readonly redlockService: RedlockService,
-    private readonly redisCacheService: RedisCacheService
+    private readonly redisCacheService: RedisCacheService,
   ) {
     this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
+    this.relayerAddress = this.configService.getRelayerAddress();
   }
 
   async generateRelayedTx(paymasterTx: TransactionDetails): Promise<Transaction> {
@@ -34,45 +36,73 @@ export class RelayerService {
     const paymasterTxData = await this.paymasterServer.getCachedTxData(paymasterTx);
     const innerTx = TransactionUtils.convertObjectToTransaction(paymasterTx);
 
-    const lockKey = this.getBroadcastTxLockKey();
+    const relayedTxV2 = await this.buildRelayedTx(innerTx, paymasterTxData.gasLimit);
     try {
-      const lockAquired = await this.redlockService.tryLockResource(lockKey, this.configService.getRedlockConfiguration());
-      if (!lockAquired) {
-        this.logger.error('Could not acquire lock for generateRelayedTx');
-        throw new InternalServerErrorException('Could not acquire lock for transaction broadcasting');
+
+      const transaction = await this.signAndBroadcastTransaction(relayedTxV2);
+      if (!transaction) {
+        throw new Error(`Broadcast failed for tx ${relayedTxV2}`);
       }
 
-      const relayerNonce = await this.getNonce();
-      const relayedTxV2 = await this.buildRelayedTx(innerTx, paymasterTxData.gasLimit, relayerNonce);
-
-      const relayerSignature = await this.signRelayedTx(relayedTxV2);
-      relayedTxV2.applySignature(relayerSignature);
-
-      const hash = await this.broadcastRelayedTx(relayedTxV2);
-      if (!hash) {
-        throw new InternalServerErrorException('Could not broadcast relayed transaction');
-      }
-
-      await this.incremenetNonce();
-      this.logger.log(`Succesful broadcast of relayed tx ${hash}`);
-      return relayedTxV2;
-    } finally {
-      await this.redlockService.release(lockKey);
+      return transaction;
+    } catch (error) {
+      throw new InternalServerErrorException('Could not broadcast relayed transaction');
     }
   }
 
-  async buildRelayedTx(innerTx: Transaction, gasLimit: number, nonce: number) {
+  async signAndBroadcastTransaction(transaction: Transaction, maxAttempts: number = 5): Promise<Transaction | undefined> {
+    const lockKey = this.getBroadcastTxLockKey();
+
+    let attempts = 0;
+    while (attempts <= maxAttempts) {
+      try {
+        const lockAquired = await this.redlockService.tryLockResource(
+          lockKey,
+          this.configService.getRedlockConfiguration()
+        );
+        if (!lockAquired) {
+          throw new Error('Could not acquire resource lock');
+        }
+
+        const nonce = await this.getNonce();
+        transaction.setNonce(nonce);
+
+        const relayerSignature = await this.signTx(transaction);
+        transaction.applySignature(relayerSignature);
+
+        const hash = await this.broadcastTransaction(transaction);
+        this.logger.log(`Successful broadcast of transaction ${hash} with nonce ${transaction.getNonce().valueOf()}`);
+
+        await this.incrementNonce(nonce);
+
+        return transaction;
+      } catch (error: any) {
+        attempts++;
+        this.logger.warn(`Broadcast attempt ${attempts} for ${transaction.getHash().hex()} failed: ${error}`);
+
+        if (error.inner?.response?.data?.message &&
+          this.isNonceTransactionError(error.inner.response.data.message)) {
+          this.logger.warn(`Transaction broadcast failed due to a stale nonce. Deleting cached value.`);
+          await this.clearCachedNonce();
+        }
+      } finally {
+        await this.redlockService.release(lockKey);
+      }
+    }
+
+    return;
+  }
+
+  async buildRelayedTx(innerTx: Transaction, gasLimit: number) {
     const networkConfig = await this.getNetworkConfig();
     const builder = new RelayedTransactionV2Builder();
-    const relayerAddress = this.configService.getRelayerAddress();
 
     try {
       const relayedTxV2 = builder
         .setInnerTransaction(innerTx)
         .setInnerTransactionGasLimit(gasLimit)
-        .setRelayerNonce(nonce)
         .setNetworkConfig(networkConfig)
-        .setRelayerAddress(new Address(relayerAddress))
+        .setRelayerAddress(new Address(this.relayerAddress))
         .build();
       return relayedTxV2;
     } catch (error) {
@@ -82,7 +112,7 @@ export class RelayerService {
     }
   }
 
-  async signRelayedTx(transaction: Transaction): Promise<Buffer> {
+  async signTx(transaction: Transaction): Promise<Buffer> {
     if (!this.relayerSigner) {
       await this.loadWallet();
     }
@@ -103,87 +133,64 @@ export class RelayerService {
     }
   }
 
-  async broadcastRelayedTx(transaction: Transaction): Promise<string | undefined> {
-    const MAX_ATTEMPTS = 5;
-    let attempts = 0;
-    while (attempts <= MAX_ATTEMPTS) {
-      try {
-        const hash = await this.networkProvider.sendTransaction(transaction);
-        return hash;
-      } catch (error) {
-        attempts++;
-        this.logger.warn(`Broadcast attempt ${attempts} failed: ${error}`);
-
-        await this.sleep(300);
-      }
+  async broadcastTransaction(transaction: Transaction): Promise<string> {
+    try {
+      const hash = await this.networkProvider.sendTransaction(transaction);
+      return hash;
+    } catch (error) {
+      this.logger.warn(`Broadcast attempt failed: ${error}`);
+      throw error;
     }
-
-    return;
   }
 
-  async getNonce(): Promise<number> {
-    let attempts = 0;
-    const MAX_ATTEMPTS = 5;
-    const relayerAddress = this.configService.getRelayerAddress();
+  async getNonce(maxAttempts: number = 5): Promise<number> {
+    const redisNonce = await this.redisCacheService.get<number>(CacheInfo.RelayerNonce(this.relayerAddress).key);
+    if (typeof redisNonce !== 'undefined') {
+      return redisNonce;
+    }
 
-    while (attempts <= MAX_ATTEMPTS) {
+    let attempts = 0;
+    while (attempts <= maxAttempts) {
       try {
-        const nonce = await this.getNonceRaw(relayerAddress);
+        const nonce = await this.getNonceRaw(this.relayerAddress);
+
+        await this.redisCacheService.set(
+          CacheInfo.RelayerNonce(this.relayerAddress).key,
+          nonce,
+          CacheInfo.RelayerNonce(this.relayerAddress).ttl
+        );
+
         return nonce;
       } catch (error) {
         attempts++;
         this.logger.warn(`Attempt ${attempts} for getNonce failed: ${error}`);
       }
     }
+
     throw new Error('Could not fetch account nonce');
   }
 
   async getNonceRaw(address: string): Promise<number> {
     const account = await this.networkProvider.getAccount(new Address(address));
 
-    const redisLock = await this.redisCacheService.setnx(
-      CacheInfo.RelayerNonce(address).key,
-      account.nonce
-    );
-    if (redisLock) {
-      await this.redisCacheService.expire(
-        CacheInfo.RelayerNonce(address).key,
-        CacheInfo.RelayerNonce(address).ttl
-      );
-      return account.nonce;
+    if (!account) {
+      throw new Error('Could not fetch account data');
     }
 
-    const redisNonce = await this.redisCacheService.get<number>(CacheInfo.RelayerNonce(address).key);
-    if (!redisNonce) {
-      throw new Error('Stale nonce. Out of sync state');
-    }
-
-    if (account.nonce > redisNonce) {
-      await this.redisCacheService.delete(CacheInfo.RelayerNonce(address).key);
-
-      throw new Error('Stale nonce. Out of sync state');
-    }
-
-    return redisNonce;
+    return account.nonce;
   }
 
-  async incremenetNonce(): Promise<number | undefined> {
-    const relayerAddress = this.configService.getRelayerAddress();
+  async incrementNonce(currentNonce: number): Promise<number | undefined> {
     try {
-      const redisNonce = await this.redisCacheService.get<number>(CacheInfo.RelayerNonce(relayerAddress).key);
-
-      if (redisNonce) {
-        return await this.redisCacheService.increment(CacheInfo.RelayerNonce(relayerAddress).key);
-      }
-
-      const account = await this.networkProvider.getAccount(new Address(relayerAddress));
-      const incrementedNonce = account.nonce + 1;
-
-      await this.redisCacheService.set(
-        CacheInfo.RelayerNonce(relayerAddress).key,
-        incrementedNonce,
-        CacheInfo.RelayerNonce(relayerAddress).ttl
+      const incrementedNonce = await this.redisCacheService.increment(
+        CacheInfo.RelayerNonce(this.relayerAddress).key,
+        CacheInfo.RelayerNonce(this.relayerAddress).ttl
       );
+
+      if (currentNonce > 0 && incrementedNonce === 1) {
+        await this.clearCachedNonce();
+        return;
+      }
 
       return incrementedNonce;
     } catch (error) {
@@ -191,13 +198,13 @@ export class RelayerService {
     }
   }
 
+  async clearCachedNonce(): Promise<void> {
+    return await this.redisCacheService.delete(CacheInfo.RelayerNonce(this.relayerAddress).key);
+  }
+
   getBroadcastTxLockKey(): string {
     const relayerAddress = this.configService.getRelayerAddress();
     return `broadcastRelayerTransaction:${relayerAddress}`;
-  }
-
-  private sleep(ms: number): Promise<void> {
-    return new Promise((resolve) => setTimeout(resolve, Number(ms)));
   }
 
   async getNetworkConfig(): Promise<NetworkConfig> {
@@ -219,5 +226,9 @@ export class RelayerService {
 
       throw new Error('Error when loading network config');
     }
+  }
+
+  private isNonceTransactionError(error: string): boolean {
+    return typeof error === 'string' && (error.includes('lowerNonceInTx: true') || error.includes('veryHighNonceInTx: true'));
   }
 }

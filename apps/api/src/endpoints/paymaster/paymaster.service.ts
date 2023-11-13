@@ -71,11 +71,11 @@ export class PaymasterService {
     const token = this.tokenService.findByIdentifier(tokenIdentifier);
     const metadata = TransactionUtils.extractMetadata(txDetails);
 
-    if (metadata.value.toString() !== '0') {
+    if (txDetails.value !== '0') {
       throw new BadRequestException('Value transfer is not allowed');
     }
 
-    if (!metadata.functionName) {
+    if (!metadata.functionName && !metadata.transfers) {
       throw new BadRequestException('Missing function call');
     }
 
@@ -87,7 +87,7 @@ export class PaymasterService {
     const typedArguments = this.getTypedSCArguments({
       relayerAddress: relayerAddress,
       destinationAddress: metadata.receiver,
-      functionName: metadata.functionName,
+      functionName: metadata.functionName ?? '',
       functionParams: metadata.functionArgs,
     });
 
@@ -104,6 +104,8 @@ export class PaymasterService {
       ...existingTransfers,
     ];
     const transaction = this.buildPaymasterTx(txDetails, contract, typedArguments, multiTransfer, 0);
+    transaction.setVersion(txDetails.version ?? 1);
+    transaction.setOptions(0);
 
     await this.setCachedTxData(transaction, gasLimit);
 

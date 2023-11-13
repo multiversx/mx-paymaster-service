@@ -4,12 +4,20 @@ REST API facade template for microservices that interacts with the MultiversX bl
 
 1. Run `npm install` in the project directory
 2. Optionally make edits to `config.yaml` or create `config.custom.yaml` for each microservice
-
+	### Configuration
+  - Set the address of a deployed Paymaster SC in `paymaster.contractAddress`
+	- Set the path to a PEM file for the relayer account in `relayer.pemFilePath`
+	- Set the address of the relayer in `relayer.address`
+	- Add at least one entry under `tokens` . Eg :
+```bash
+tokens:
+  - USDC-350c4e:
+      feePercentage: 3
+      feeAmount: '10000'
+```
 ## Dependencies
 
 1. Redis Server is required to be installed [docs](https://redis.io/).
-2. MySQL Server is required to be installed [docs](https://dev.mysql.com/doc/refman/8.0/en/installing.html).
-3. MongoDB Server is required to be installed [docs](https://docs.mongodb.com/).
 
 You can run `docker-compose up` in a separate terminal to use a local Docker container for all these dependencies.
 
@@ -28,17 +36,20 @@ Endpoints that can be used by anyone (public endpoints).
 Endpoints that are not exposed on the internet
 For example: We do not want to expose our metrics and cache interactions to anyone (/metrics /cache)
 
-### `Cache Warmer`
+### `Autoswap`
 
-This is used to keep the application cache in sync with new updates.
+Cronjob that performs automatic swapping from token -> wrapped EGLD.
 
-### `Transaction Processor`
-
-This is used for scanning the transactions from MultiversX Blockchain.
-
-### `Queue Worker`
-
-This is used for concurrently processing heavy jobs.
+If enabled, the configuration for the tokens you want to automatically swap needs to contain some extra fields. Eg:
+```bash
+- RIDE-05b1bb:
+    feePercentage: 5
+    feeAmount: '0'
+    swapContract: 'erd1qqqqqqqqqqqqqpgqpvfd0cuspuewm9z9p6lcmp66ylqg4js30n4sj2rjwh'
+    swapParameters: 'swapTokensFixedInput@WEGLD-a28c59@01'
+    swapMinAmount: '2000000000000000000'
+    swapGasLimit: 12050000
+```
 
 ## Available Scripts
 
@@ -66,38 +77,6 @@ $ npm run start:devnet
 
 # production mode
 $ npm run start:mainnet
-```
-
-## Running the transactions-processor
-
-```bash
-# development watch mode on devnet
-$ npm run start:transactions-processor:devnet:watch
-
-# development debug mode on devnet
-$ npm run start:transactions-processor:devnet:debug
-
-# development mode on devnet
-$ npm run start:transactions-processor:devnet
-
-# production mode
-$ npm run start:transactions-processor:mainnet
-```
-
-## Running the queue-worker
-
-```bash
-# development watch mode on devnet
-$ npm run start:queue-worker:devnet:watch
-
-# development debug mode on devnet
-$ npm run start:queue-worker:devnet:debug
-
-# development mode on devnet
-$ npm run start:queue-worker:devnet
-
-# production mode
-$ npm run start:queue-worker:mainnet
 ```
 
 Requests can be made to http://localhost:3001 for the api. The app will reload when you'll make edits (if opened in watch mode). You will also see any lint errors in the console.​
