@@ -312,13 +312,8 @@ export class ApiConfigService {
     return pemFilePath;
   }
 
-  getRelayerEGLDFee(): string {
-    const relayerFee = this.configService.get<string>('relayer.flatFeeEGLD');
-    if (relayerFee === undefined) {
-      throw new Error('No relayer fee present');
-    }
-
-    return relayerFee;
+  getRelayerName(): string | undefined {
+    return this.configService.get<string>('relayer.name');
   }
 
   getAcceptedTokens(): any[] {

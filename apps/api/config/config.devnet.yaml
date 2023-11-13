@@ -5,12 +5,6 @@ urls:
     - 'https://testnet-microservice.multiversx.com'
     - 'https://microservice.multiversx.com'
   redis: '127.0.0.1'
-database:
-  host: 'localhost'
-  port: 3306
-  username: 'root'
-  password: 'root'
-  name: 'paymaster'
 features:
   publicApi:
     enabled: true
@@ -22,7 +16,7 @@ features:
     enabled: true
   swap:
     enabled: true
-    cron: '* * * * *'
+    cron: '*/10 * * * * *'
 nativeAuth:
   maxExpirySeconds:
   acceptedOrigins:
@@ -42,9 +36,9 @@ paymaster:
   contractAddress: 'erd1qqqqqqqqqqqqqpgqvfnt8jj0e5808lk3557dgzs6twcne5083hvqetsaqp'
   gasLimit: 10000000
 relayer:
-  address: 'erd1pqgkdfkrxr33j4d9hyqtvkrmmqhn8kdx2xwzduych5zvhhnv59hshw0lyp'
-  pemFilePath: 'apps/api/src/wallets/relayerWallet.pem'
-  flatFeeEGLD: '15000000000000000'
+  address: 'erd15jq4yhwe4nt79zv4cquk5mdv6umwkewfap6ysfpls3ajvr79jt7s39fw93'
+  pemFilePath: 'apps/api/src/wallets/relayerWallet_2.pem'
+  name:
 wrappedEGLDIdentifier: 'WEGLD-a28c59'
 tokens:
   - USDC-350c4e:
