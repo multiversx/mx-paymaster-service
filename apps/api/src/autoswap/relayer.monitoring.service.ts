@@ -1,8 +1,10 @@
 import { Locker } from "@multiversx/sdk-nestjs-common";
 import { Injectable, Logger } from "@nestjs/common";
-import { Cron } from "@nestjs/schedule";
+import { SchedulerRegistry } from "@nestjs/schedule";
 import { SwapService } from "./swap.service";
 import { Transaction } from "@multiversx/sdk-core/out";
+import { CronJob } from "cron";
+import { ApiConfigService } from "@mvx-monorepo/common";
 
 @Injectable()
 export class RelayerMonitoringService {
@@ -10,11 +12,16 @@ export class RelayerMonitoringService {
 
   constructor(
     private readonly swapService: SwapService,
+    private readonly schedulerRegistry: SchedulerRegistry,
+    private readonly apiConfigService: ApiConfigService,
   ) {
     this.logger = new Logger(RelayerMonitoringService.name);
+
+    const handleAutoSwapsCronJob = new CronJob(this.apiConfigService.getAutoSwapCronSchedule(), async () => await this.handleAutoSwaps());
+    this.schedulerRegistry.addCronJob(this.handleAutoSwaps.name, handleAutoSwapsCronJob);
+    handleAutoSwapsCronJob.start();
   }
 
-  @Cron('*/10 * * * * *')
   async handleAutoSwaps() {
     await Locker.lock('autoSwap', async () => {
       try {
