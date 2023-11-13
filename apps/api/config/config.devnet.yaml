@@ -37,7 +37,7 @@ paymaster:
   gasLimit: 10000000
 relayer:
   address: 'erd15jq4yhwe4nt79zv4cquk5mdv6umwkewfap6ysfpls3ajvr79jt7s39fw93'
-  pemFilePath: 'apps/api/src/wallets/relayerWallet_2.pem'
+  pemFilePath: 'apps/api/wallets/relayerWallet_2.pem'
   name:
 wrappedEGLDIdentifier: 'WEGLD-a28c59'
 tokens:
