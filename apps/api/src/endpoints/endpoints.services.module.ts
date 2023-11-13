@@ -1,19 +1,18 @@
 import { Module } from "@nestjs/common";
-import { ExampleModule } from "@mvx-monorepo/common";
 import { TestSocketModule } from "./test-sockets/test.socket.module";
 import { TokenModule } from "./tokens/token.module";
-import { UsersModule } from "./users/user.module";
-import configuration from "../../config/configuration";
+import { PaymasterModule } from "./paymaster/paymaster.module";
+import { RelayerModule } from "./relayer/relayer.module";
 
 @Module({
   imports: [
-    ExampleModule.forRoot(configuration),
     TestSocketModule,
-    UsersModule,
     TokenModule,
+    PaymasterModule,
+    RelayerModule,
   ],
   exports: [
-    ExampleModule, TestSocketModule, UsersModule, TokenModule,
+    TestSocketModule, TokenModule, PaymasterModule, RelayerModule,
   ],
 })
 export class EndpointsServicesModule { }

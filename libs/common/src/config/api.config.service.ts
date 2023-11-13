@@ -1,5 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { RedlockConfiguration } from "../redlock";
 
 @Injectable()
 export class ApiConfigService {
@@ -273,5 +274,89 @@ export class ApiConfigService {
 
   getNativeAuthAcceptedOrigins(): string[] {
     return this.configService.get<string[]>('nativeAuth.acceptedOrigins') ?? [];
+  }
+
+  getPaymasterContractAddress(): string {
+    const paymasterAddress = this.configService.get<string>('paymaster.contractAddress');
+    if (paymasterAddress === undefined) {
+      throw new Error('No paymaster contract address present');
+    }
+
+    return paymasterAddress;
+  }
+
+  getPaymasterGasLimit(): number {
+    const gas = this.configService.get<number>('paymaster.gasLimit');
+    if (gas === undefined) {
+      throw new Error('No paymaster gas limit present');
+    }
+
+    return gas;
+  }
+
+  getRelayerAddress(): string {
+    const relayerAddress = this.configService.get<string>('relayer.address');
+    if (relayerAddress === undefined) {
+      throw new Error('No relayer address present');
+    }
+
+    return relayerAddress;
+  }
+
+  getRelayerPEMFilePath(): string {
+    const pemFilePath = this.configService.get<string>('relayer.pemFilePath');
+    if (pemFilePath === undefined) {
+      throw new Error('No relayer PEM path present');
+    }
+
+    return pemFilePath;
+  }
+
+  getRelayerName(): string | undefined {
+    return this.configService.get<string>('relayer.name');
+  }
+
+  getAcceptedTokens(): any[] {
+    const tokens = this.configService.get('tokens');
+    return tokens;
+  }
+
+  getWrappedEGLDIdentifier(): string {
+    const identifier = this.configService.get<string>('wrappedEGLDIdentifier');
+    if (identifier === undefined) {
+      throw new Error('No wrapped EGLD identifier present');
+    }
+
+    return identifier;
+  }
+
+  getIsAutoSwapFeatureActive(): boolean {
+    const isAutoSwapActive = this.configService.get<boolean>('features.swap.enabled');
+    if (isAutoSwapActive === undefined) {
+      throw new Error('No auto swap feature flag present');
+    }
+
+    return isAutoSwapActive;
+  }
+
+  getAutoSwapCronSchedule(): string {
+    const cronScheduleExpression = this.configService.get<string>('features.swap.cron');
+    if (cronScheduleExpression === undefined) {
+      throw new Error('No auto swap cron expression present');
+    }
+
+    return cronScheduleExpression;
+  }
+
+  getRedlockConfiguration(): RedlockConfiguration {
+    const keyExpiration = this.configService.get<number>('redlock.keyExpiration') ?? 60000;
+    const maxRetries = this.configService.get<number>('redlock.maxRetries') ?? 50;
+    const retryInterval = this.configService.get<number>('redlock.retryInterval') ?? 1000;
+
+    return {
+      keyExpiration,
+      maxRetries,
+      retryInterval,
+    };
   }
 }

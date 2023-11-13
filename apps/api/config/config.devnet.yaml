@@ -5,12 +5,6 @@ urls:
     - 'https://testnet-microservice.multiversx.com'
     - 'https://microservice.multiversx.com'
   redis: '127.0.0.1'
-database:
-  host: 'localhost'
-  port: 3306
-  username: 'root'
-  password: 'root'
-  name: 'example'
 features:
   publicApi:
     enabled: true
@@ -20,6 +14,9 @@ features:
     port: 4000
   keepAliveAgent:
     enabled: true
+  swap:
+    enabled: true
+    cron: '*/10 * * * * *'
 nativeAuth:
   maxExpirySeconds:
   acceptedOrigins:
@@ -31,3 +28,47 @@ keepAliveTimeout:
   downstream: 61000
   upstream: 60000
 useCachingInterceptor: false
+redlock:
+  keyExpiration: 60000
+  maxRetries: 50
+  retryInterval: 1000
+paymaster:
+  contractAddress: 'erd1qqqqqqqqqqqqqpgqvfnt8jj0e5808lk3557dgzs6twcne5083hvqetsaqp'
+  gasLimit: 10000000
+relayer:
+  address: 'erd15jq4yhwe4nt79zv4cquk5mdv6umwkewfap6ysfpls3ajvr79jt7s39fw93'
+  pemFilePath: 'apps/api/wallets/relayerWallet_2.pem'
+  name:
+wrappedEGLDIdentifier: 'WEGLD-a28c59'
+tokens:
+  - USDC-350c4e:
+      feePercentage: 3
+      feeAmount: '10000'
+  - RIDE-05b1bb:
+      feePercentage: 5
+      feeAmount: '0'
+      swapContract: 'erd1qqqqqqqqqqqqqpgqpvfd0cuspuewm9z9p6lcmp66ylqg4js30n4sj2rjwh'
+      swapParameters: 'swapTokensFixedInput@WEGLD-a28c59@01'
+      swapMinAmount: '2000000000000000000'
+      swapGasLimit: 12050000
+  - WEGLD-a28c59:
+      feePercentage: 5
+      feeAmount: '0'
+      swapContract: 'erd1qqqqqqqqqqqqqpgqpv09kfzry5y4sj05udcngesat07umyj70n4sa2c0rp'
+      swapParameters: 'unwrapEgld'
+      swapMinAmount: '50000000000000000'
+      swapGasLimit: 4200000
+  - ASH-e3d1b7:
+      feePercentage: 5
+      feeAmount: '1000000'
+      swapContract: 'erd1qqqqqqqqqqqqqpgq0e9pmlzr0nk5nkulzcmessttsjkzr4xf0n4sue4r8e'
+      swapParameters: 'swapTokensFixedInput@WEGLD-a28c59@01'
+      swapMinAmount: '50000000000000000'
+      swapGasLimit: 12050000
+  - ITHEUM-fce905:
+      feePercentage: 5
+      feeAmount: '1000000'
+      swapContract: 'erd1qqqqqqqqqqqqqpgqus9r9gwtg24a9fvzv743hgydecpkxs8q0n4szz2az0'
+      swapParameters: 'swapTokensFixedInput@WEGLD-a28c59@01'
+      swapMinAmount: '1000000000000'
+      swapGasLimit: 12050000

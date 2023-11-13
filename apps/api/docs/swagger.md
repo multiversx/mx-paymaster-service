@@ -1,3 +1,8 @@
-## Welcome the the MultiversX Microservice API!
+The API allows generating and relaying transactions that interact with Paymaster smart contracts.
 
-Here you can set your custom documentation in markdown format
+## Request
+* Requests with a message body use JSON. Successful requests will return a `2xx` HTTP status.
+
+## Response
+
+* JSON will be returned for all responses, including errors.

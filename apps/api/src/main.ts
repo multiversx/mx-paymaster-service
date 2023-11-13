@@ -23,6 +23,7 @@ import '@multiversx/sdk-nestjs-common/lib/utils/extensions/date.extensions';
 import '@multiversx/sdk-nestjs-common/lib/utils/extensions/number.extensions';
 import '@multiversx/sdk-nestjs-common/lib/utils/extensions/string.extensions';
 import configuration from '../config/configuration';
+import { SwapModule } from './autoswap/swap.module';
 
 async function bootstrap() {
   const publicApp = await NestFactory.create(PublicAppModule);
@@ -62,7 +63,7 @@ async function bootstrap() {
   const description = readFileSync(join(__dirname, '..', 'docs', 'swagger.md'), 'utf8');
 
   let documentBuilder = new DocumentBuilder()
-    .setTitle('MultiversX Microservice API')
+    .setTitle('MultiversX Paymaster Service API')
     .setDescription(description)
     .setVersion('1.0.0')
     .setExternalDoc('MultiversX Docs', 'https://docs.multiversx.com');
@@ -74,8 +75,15 @@ async function bootstrap() {
 
   const config = documentBuilder.build();
 
+  const options = {
+    customSiteTitle: 'Multiversx Paymaster Service API',
+    customCss: `.swagger-ui .topbar { display:none }
+          .swagger-ui .scheme-container {background-color: #FAFAFA;}`,
+  };
+
   const document = SwaggerModule.createDocument(publicApp, config);
-  SwaggerModule.setup('', publicApp, document);
+  SwaggerModule.setup('', publicApp, document, options);
+  SwaggerModule.setup('docs', publicApp, document, options);
 
   if (apiConfigService.getIsPublicApiFeatureActive()) {
     await publicApp.listen(apiConfigService.getPublicApiFeaturePort());
@@ -84,6 +92,11 @@ async function bootstrap() {
   if (apiConfigService.getIsPrivateApiFeatureActive()) {
     const privateApp = await NestFactory.create(PrivateAppModule);
     await privateApp.listen(apiConfigService.getPrivateApiFeaturePort());
+  }
+
+  if (apiConfigService.getIsAutoSwapFeatureActive()) {
+    const autoSwapApp = await NestFactory.create(SwapModule);
+    await autoSwapApp.listen(7777);
   }
 
   const logger = new Logger('Bootstrapper');
@@ -110,6 +123,7 @@ async function bootstrap() {
 
   logger.log(`Public API active: ${apiConfigService.getIsPublicApiFeatureActive()}`);
   logger.log(`Private API active: ${apiConfigService.getIsPrivateApiFeatureActive()}`);
+  logger.log(`AutoSwap active: ${apiConfigService.getIsAutoSwapFeatureActive()}`);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
