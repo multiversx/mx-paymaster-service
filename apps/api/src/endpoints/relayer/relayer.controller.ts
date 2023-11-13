@@ -17,11 +17,11 @@ export class RelayerController {
   @Get("/info")
   @ApiOkResponse({ type: RelayerDetails })
   @ApiNotFoundResponse({ description: 'Relayer configuration not set' })
-  getFee(): RelayerDetails {
+  getInfo(): RelayerDetails {
     try {
       const result: RelayerDetails = {
-        feeInEGLD: this.configService.getRelayerEGLDFee(),
         address: this.configService.getRelayerAddress(),
+        name: this.configService.getRelayerName() ?? '',
       };
       return result;
     } catch (error) {

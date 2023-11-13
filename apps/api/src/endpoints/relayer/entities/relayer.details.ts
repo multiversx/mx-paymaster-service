@@ -2,8 +2,8 @@ import { ApiResponseProperty } from "@nestjs/swagger";
 
 export class RelayerDetails {
   @ApiResponseProperty()
-  feeInEGLD: string = '';
+  address: string = '';
 
   @ApiResponseProperty()
-  address: string = '';
+  name: string = '';
 }
