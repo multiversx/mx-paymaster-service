@@ -75,8 +75,15 @@ async function bootstrap() {
 
   const config = documentBuilder.build();
 
+  const options = {
+    customSiteTitle: 'Multiversx Paymaster Service API',
+    customCss: `.swagger-ui .topbar { display:none }
+          .swagger-ui .scheme-container {background-color: #FAFAFA;}`,
+  };
+
   const document = SwaggerModule.createDocument(publicApp, config);
-  SwaggerModule.setup('', publicApp, document);
+  SwaggerModule.setup('', publicApp, document, options);
+  SwaggerModule.setup('docs', publicApp, document, options);
 
   if (apiConfigService.getIsPublicApiFeatureActive()) {
     await publicApp.listen(apiConfigService.getPublicApiFeaturePort());
