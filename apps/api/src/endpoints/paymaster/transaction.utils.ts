@@ -32,9 +32,18 @@ export class TransactionUtils {
 
       if (element.properties?.collection && element.properties.identifier) {
         const nonce = element.properties.identifier?.split('-')[2];
-        return TokenTransfer.nonFungible(
+        const valueBigNum = new BigNumber(element.value.toString());
+        if (valueBigNum.isEqualTo(BigNumber(1))) {
+          return TokenTransfer.nonFungible(
+            element.properties.collection,
+            parseInt(nonce, 16)
+          );
+        }
+
+        return TokenTransfer.metaEsdtFromBigInteger(
           element.properties.collection,
-          parseInt(nonce, 16)
+          parseInt(nonce, 16),
+          valueBigNum
         );
       }
 
