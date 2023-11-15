@@ -39,7 +39,7 @@ redlock:
   maxRetries: 50
   retryInterval: 1000
 paymaster:
-  contractAddress: 'erd1qqqqqqqqqqqqqpgqvfnt8jj0e5808lk3557dgzs6twcne5083hvqetsaqp'
+  contractAddress: 'erd1qqqqqqqqqqqqqpgqdem9de04rjc93lctr4gwk6dtxjhh5c0j3hvq8z6mk6'
   gasLimit: 10000000
 relayer:
   address: 'erd1kkgcuncvsm9k0vkhrgpt26pn2xg00se9598mxzwhvrme252dt3vshl8wpl'
