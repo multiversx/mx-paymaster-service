@@ -27,6 +27,10 @@
           {
             "include": "../docs/swagger.md",
             "outDir": "./dist/apps/api/docs"
+          },
+          {
+            "include": "abis/paymaster.abi.json",
+            "outDir": "./dist/apps/api/src/abis"
           }
         ]
       }
