@@ -10,7 +10,6 @@ import { RedlockModule } from "@mvx-monorepo/common/redlock";
   imports: [
     TokenModule,
     DynamicModuleUtils.getRedisModule(configuration),
-    DynamicModuleUtils.getCachingModule(configuration),
     RedlockModule.register(configuration),
   ],
   providers: [

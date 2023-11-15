@@ -4,7 +4,6 @@ urls:
     - 'https://microservice.multiversx.com'
     - 'https://devnet-microservice.multiversx.com'
     - 'https://testnet-microservice.multiversx.com'
-  redis: '127.0.0.1'
 features:
   publicApi:
     enabled: true
@@ -28,6 +27,13 @@ keepAliveTimeout:
   downstream: 61000
   upstream: 60000
 useCachingInterceptor: false
+redis:
+  host: '127.0.0.1'
+  port: 6379
+  username:
+  password: ''
+  tls: false
+globalPrefix: ''
 redlock:
   keyExpiration: 60000
   maxRetries: 50

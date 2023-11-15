@@ -36,6 +36,7 @@ async function bootstrap() {
   const cachingService = publicApp.get<CacheService>(CacheService);
   const metricsService = publicApp.get<MetricsService>(MetricsService);
   const httpAdapterHostService = publicApp.get<HttpAdapterHost>(HttpAdapterHost);
+  const globalPrefix = apiConfigService.getGlobalPrefix();
 
   if (apiConfigService.getIsAuthActive()) {
     publicApp.useGlobalGuards(new NativeAuthGuard(new SdkNestjsConfigServiceImpl(apiConfigService), cachingService));
@@ -59,6 +60,7 @@ async function bootstrap() {
   }
 
   publicApp.useGlobalInterceptors(...globalInterceptors);
+  publicApp.setGlobalPrefix(globalPrefix);
 
   const description = readFileSync(join(__dirname, '..', 'docs', 'swagger.md'), 'utf8');
 
@@ -82,8 +84,8 @@ async function bootstrap() {
   };
 
   const document = SwaggerModule.createDocument(publicApp, config);
-  SwaggerModule.setup('', publicApp, document, options);
-  SwaggerModule.setup('docs', publicApp, document, options);
+  SwaggerModule.setup(globalPrefix, publicApp, document, options);
+  SwaggerModule.setup(`${globalPrefix}/docs`, publicApp, document, options);
 
   if (apiConfigService.getIsPublicApiFeatureActive()) {
     await publicApp.listen(apiConfigService.getPublicApiFeaturePort());
@@ -91,11 +93,13 @@ async function bootstrap() {
 
   if (apiConfigService.getIsPrivateApiFeatureActive()) {
     const privateApp = await NestFactory.create(PrivateAppModule);
+    privateApp.setGlobalPrefix(globalPrefix);
     await privateApp.listen(apiConfigService.getPrivateApiFeaturePort());
   }
 
   if (apiConfigService.getIsAutoSwapFeatureActive()) {
     const autoSwapApp = await NestFactory.create(SwapModule);
+    autoSwapApp.setGlobalPrefix(globalPrefix);
     await autoSwapApp.listen(7777);
   }
 
@@ -108,8 +112,11 @@ async function bootstrap() {
     {
       transport: Transport.REDIS,
       options: {
-        host: apiConfigService.getRedisUrl(),
-        port: 6379,
+        host: apiConfigService.getRedisHost(),
+        port: apiConfigService.getRedisPort(),
+        username: apiConfigService.getRedisUsername(),
+        password: apiConfigService.getRedisPassword(),
+        tls: apiConfigService.getRedisTls() === true ? {} : undefined,
         retryAttempts: 100,
         retryDelay: 1000,
         retryStrategy: () => 1000,

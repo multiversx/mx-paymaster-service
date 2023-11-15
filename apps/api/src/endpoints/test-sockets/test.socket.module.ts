@@ -16,8 +16,11 @@ import configuration from "../../../config/configuration";
         const clientOptions: ClientOptions = {
           transport: Transport.REDIS,
           options: {
-            host: apiConfigService.getRedisUrl(),
-            port: 6379,
+            host: apiConfigService.getRedisHost(),
+            port: apiConfigService.getRedisPort(),
+            username: apiConfigService.getRedisUsername(),
+            password: apiConfigService.getRedisPassword(),
+            tls: apiConfigService.getRedisTls() === true ? {} : undefined,
             retryDelay: 1000,
             retryAttempts: 10,
             retryStrategy: () => 1000,
