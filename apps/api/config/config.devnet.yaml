@@ -4,7 +4,6 @@ urls:
     - 'https://devnet-microservice.multiversx.com'
     - 'https://testnet-microservice.multiversx.com'
     - 'https://microservice.multiversx.com'
-  redis: '127.0.0.1'
 features:
   publicApi:
     enabled: true
@@ -15,7 +14,7 @@ features:
   keepAliveAgent:
     enabled: true
   swap:
-    enabled: true
+    enabled: false
     cron: '*/10 * * * * *'
 nativeAuth:
   maxExpirySeconds:
@@ -28,6 +27,13 @@ keepAliveTimeout:
   downstream: 61000
   upstream: 60000
 useCachingInterceptor: false
+redis:
+  host: '127.0.0.1'
+  port: 6379
+  username:
+  password: ''
+  tls: false
+globalPrefix: ''
 redlock:
   keyExpiration: 60000
   maxRetries: 50
@@ -36,8 +42,8 @@ paymaster:
   contractAddress: 'erd1qqqqqqqqqqqqqpgqvfnt8jj0e5808lk3557dgzs6twcne5083hvqetsaqp'
   gasLimit: 10000000
 relayer:
-  address: 'erd15jq4yhwe4nt79zv4cquk5mdv6umwkewfap6ysfpls3ajvr79jt7s39fw93'
-  pemFilePath: 'apps/api/wallets/relayerWallet_2.pem'
+  address: 'erd1kkgcuncvsm9k0vkhrgpt26pn2xg00se9598mxzwhvrme252dt3vshl8wpl'
+  pemFilePath: 'apps/api/wallets/relayerWallet_3.pem'
   name:
 wrappedEGLDIdentifier: 'WEGLD-a28c59'
 tokens:

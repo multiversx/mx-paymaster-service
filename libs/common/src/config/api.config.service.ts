@@ -24,30 +24,34 @@ export class ApiConfigService {
     return swaggerUrls;
   }
 
-  getRedisUrl(): string {
-    const redisUrl = this.configService.get<string>('urls.redis');
-    if (!redisUrl) {
-      throw new Error('No redisUrl present');
+  getRedisHost(): string {
+    const redisHost = this.configService.get<string>('redis.host');
+    if (!redisHost) {
+      throw new Error('No redisHost present');
     }
 
-    return redisUrl;
-  }
-
-  getRedisHost(): string {
-    const url = this.getRedisUrl();
-
-    return url.split(':')[0];
+    return redisHost;
   }
 
   getRedisPort(): number {
-    const url = this.getRedisUrl();
-    const components = url.split(':');
-
-    if (components.length > 1) {
-      return Number(components[1]);
+    const redisPort = this.configService.get<number>('redis.port');
+    if (!redisPort) {
+      throw new Error('No redisPort present');
     }
 
-    return 6379;
+    return redisPort;
+  }
+
+  getRedisUsername(): string {
+    return this.configService.get<string>('redis.username') || 'default';
+  }
+
+  getRedisPassword(): string {
+    return this.configService.get<string>('redis.password') || '';
+  }
+
+  getRedisTls(): boolean {
+    return this.configService.get<boolean>('redis.tls') || false;
   }
 
   getDatabaseHost(): string {
@@ -358,5 +362,14 @@ export class ApiConfigService {
       maxRetries,
       retryInterval,
     };
+  }
+
+  getGlobalPrefix(): string {
+    const globalPrefix = this.configService.get<string>('globalPrefix');
+    if (globalPrefix === undefined) {
+      throw new Error('No API global prefix present');
+    }
+
+    return globalPrefix;
   }
 }
