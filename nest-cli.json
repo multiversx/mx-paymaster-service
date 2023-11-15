@@ -30,7 +30,7 @@
           },
           {
             "include": "abis/paymaster.abi.json",
-            "outDir": "./dist/apps/api/src/abis"
+            "outDir": "./dist/apps/api/src"
           }
         ]
       }
