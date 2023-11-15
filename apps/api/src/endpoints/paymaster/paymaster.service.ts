@@ -36,7 +36,8 @@ export class PaymasterService {
     private readonly tokenService: TokenService,
   ) {
     this.logger = new Logger(PaymasterService.name);
-    this.contractLoader = new ContractLoader(`apps/api/src/abis/paymaster.abi.json`);
+    const abiPath = './apps/api/src/abis/paymaster.abi.json';
+    this.contractLoader = new ContractLoader(abiPath);
     this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
   }
 
