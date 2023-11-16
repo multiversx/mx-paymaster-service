@@ -1,22 +1,20 @@
 import { SmartContract, AbiRegistry, Address } from "@multiversx/sdk-core";
 import { Logger } from "@nestjs/common";
-import { promises } from "fs";
 
 export class ContractLoader {
   private readonly logger: Logger;
-  private readonly abiPath: string;
+  private readonly jsonString: string;
   private contract: SmartContract | undefined = undefined;
 
-  constructor(abiPath: string) {
-    this.abiPath = abiPath;
+  constructor(jsonString: string) {
+    this.jsonString = jsonString;
 
     this.logger = new Logger(ContractLoader.name);
   }
 
-  private async load(contractAddress: string): Promise<SmartContract> {
+  private load(contractAddress: string): SmartContract {
     try {
-      const jsonContent: string = await promises.readFile(this.abiPath, { encoding: "utf8" });
-      const json = JSON.parse(jsonContent);
+      const json = JSON.parse(this.jsonString);
 
       const abiRegistry = AbiRegistry.create(json);
 
@@ -32,9 +30,9 @@ export class ContractLoader {
     }
   }
 
-  async getContract(contractAddress: string): Promise<SmartContract> {
+  getContract(contractAddress: string): SmartContract {
     if (!this.contract) {
-      this.contract = await this.load(contractAddress);
+      this.contract = this.load(contractAddress);
     }
 
     return this.contract;

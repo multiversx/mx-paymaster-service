@@ -22,6 +22,7 @@ import { TransactionUtils } from "./transaction.utils";
 import { ApiNetworkProvider, NetworkConfig } from "@multiversx/sdk-network-providers/out";
 import { TokenConfig } from "../tokens/entities/token.config";
 import { PaymasterArguments } from "./entities/paymaster.arguments";
+import { PaymasterAbiJson } from "../../abis/paymaster.abi";
 
 @Injectable()
 export class PaymasterService {
@@ -36,8 +37,8 @@ export class PaymasterService {
     private readonly tokenService: TokenService,
   ) {
     this.logger = new Logger(PaymasterService.name);
-    const abiPath = 'apps/api/src/abis/paymaster.abi.json';
-    this.contractLoader = new ContractLoader(abiPath);
+
+    this.contractLoader = new ContractLoader(PaymasterAbiJson);
     this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
   }
 
