@@ -40,6 +40,9 @@ redlock:
   retryInterval: 1000
 paymaster:
   contractAddress:
+    shard0:
+    shard1:
+    shard2:
   gasLimit: 10000000
 relayer:
   address:

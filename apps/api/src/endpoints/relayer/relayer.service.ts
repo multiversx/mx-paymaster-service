@@ -46,6 +46,7 @@ export class RelayerService {
 
       return transaction;
     } catch (error) {
+      this.logger.error(error);
       throw new InternalServerErrorException('Could not broadcast relayed transaction');
     }
   }

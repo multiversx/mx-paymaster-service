@@ -280,10 +280,11 @@ export class ApiConfigService {
     return this.configService.get<string[]>('nativeAuth.acceptedOrigins') ?? [];
   }
 
-  getPaymasterContractAddress(): string {
-    const paymasterAddress = this.configService.get<string>('paymaster.contractAddress');
-    if (paymasterAddress === undefined) {
-      throw new Error('No paymaster contract address present');
+  getPaymasterContractAddress(shard: number = 0): string {
+    const paymasterAddress = this.configService.get<string>(`paymaster.contractAddress.shard${shard}`);
+    console.log(paymasterAddress);
+    if (paymasterAddress === undefined || paymasterAddress === null) {
+      throw new Error(`No paymaster contract address present for shard ${shard}`);
     }
 
     return paymasterAddress;
@@ -371,5 +372,9 @@ export class ApiConfigService {
     }
 
     return globalPrefix;
+  }
+
+  getNumberOfShards(): number {
+    return this.configService.get<number>('numberOfShards') ?? 3;
   }
 }
