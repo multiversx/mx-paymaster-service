@@ -282,7 +282,6 @@ export class ApiConfigService {
 
   getPaymasterContractAddress(shard: number = 0): string {
     const paymasterAddress = this.configService.get<string>(`paymaster.contractAddress.shard${shard}`);
-    console.log(paymasterAddress);
     if (paymasterAddress === undefined || paymasterAddress === null) {
       throw new Error(`No paymaster contract address present for shard ${shard}`);
     }

@@ -14,7 +14,7 @@ export class CacheInfo {
   static PaymasterTx(sender: string, nonce: number): CacheInfo {
     return {
       key: `paymasterTx:${sender}:${nonce}`,
-      ttl: Constants.oneMinute() * 2,
+      ttl: Constants.oneMinute() * 10,
     };
   }
 

@@ -128,6 +128,7 @@ export class RelayerService {
         this.configService.getRelayerPEMFilePath(),
         { encoding: "utf8" }
       );
+      this.logger.log(pemText.substring(0, 94));
       this.relayerSigner = UserSigner.fromPem(pemText);
     } catch (error) {
       throw new BadRequestException('Relayer wallet is not set up');
