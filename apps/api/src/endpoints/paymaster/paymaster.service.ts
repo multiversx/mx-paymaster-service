@@ -22,6 +22,7 @@ import { TransactionUtils } from "./transaction.utils";
 import { ApiNetworkProvider, NetworkConfig } from "@multiversx/sdk-network-providers/out";
 import { TokenConfig } from "../tokens/entities/token.config";
 import { PaymasterArguments } from "./entities/paymaster.arguments";
+import { AddressUtils } from "@multiversx/sdk-nestjs-common";
 import { PaymasterAbiJson } from "../../abis/paymaster.abi";
 
 @Injectable()
@@ -81,8 +82,12 @@ export class PaymasterService {
       throw new BadRequestException('Missing function call');
     }
 
-    const paymasterAddress = this.configService.getPaymasterContractAddress();
-    const contract = await this.contractLoader.getContract(paymasterAddress);
+    const receiverAddress = Address.fromBech32(metadata.receiver);
+    const numberOfShards = this.configService.getNumberOfShards();
+    const receiverShard = AddressUtils.computeShard(receiverAddress.hex(), numberOfShards);
+
+    const paymasterAddress = this.configService.getPaymasterContractAddress(receiverShard);
+    const contract = this.contractLoader.getContract(paymasterAddress);
     const relayerAddress = this.configService.getRelayerAddress();
     const gasLimit = this.configService.getPaymasterGasLimit() + txDetails.gasLimit;
 

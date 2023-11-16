@@ -39,7 +39,10 @@ redlock:
   maxRetries: 50
   retryInterval: 1000
 paymaster:
-  contractAddress: 'erd1qqqqqqqqqqqqqpgqdem9de04rjc93lctr4gwk6dtxjhh5c0j3hvq8z6mk6'
+  contractAddress: 
+    shard0: 'erd1qqqqqqqqqqqqqpgqdem9de04rjc93lctr4gwk6dtxjhh5c0j3hvq8z6mk6'
+    shard1: 'erd1qqqqqqqqqqqqqpgqcfsatn0uud782nrkk230aq4dwmgtdhpys3ssu5nvzk'
+    shard2: 'erd1qqqqqqqqqqqqqpgq34p72qjp8rdut5kewtpde8fa5yu7hpz7dheqetm3ks'
   gasLimit: 10000000
 relayer:
   address: 'erd1kkgcuncvsm9k0vkhrgpt26pn2xg00se9598mxzwhvrme252dt3vshl8wpl'
