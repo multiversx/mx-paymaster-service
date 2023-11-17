@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { TransactionDetails } from "./entities/transaction.details";
 import {
   Address,
@@ -80,6 +80,13 @@ export class PaymasterService {
 
     if (!metadata.functionName && !metadata.transfers) {
       throw new BadRequestException('Missing function call');
+    }
+
+    const senderFailedTxs = await this.getAddressFailedTxsCounter(metadata.sender);
+    if (senderFailedTxs > this.configService.getAddressMaxFailedTxsPerHour()) {
+      this.logger.warn(`${metadata.sender} is attempting to submit a transaction while being timed out`);
+
+      throw new ForbiddenException('Too many failed transactions in the past hour');
     }
 
     const receiverAddress = Address.fromBech32(metadata.receiver);
@@ -204,6 +211,16 @@ export class PaymasterService {
     }
 
     return txData;
+  }
+
+  async getAddressFailedTxsCounter(address: string): Promise<number> {
+    const currentHour = new Date().getHours().toString();
+
+    const failedTxs = await this.cacheService.getRemote<number>(
+      CacheInfo.AddressFailedTxs(address, currentHour).key
+    );
+
+    return failedTxs ?? 0;
   }
 
   async getNetworkConfig(): Promise<NetworkConfig> {

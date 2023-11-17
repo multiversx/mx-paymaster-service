@@ -380,4 +380,8 @@ export class ApiConfigService {
   getIsDrainProtectionFeatureActive(): boolean {
     return this.configService.get<boolean>('features.drainProtection.enabled') ?? true;
   }
+
+  getAddressMaxFailedTxsPerHour(): number {
+    return this.configService.get<number>('features.drainProtection.addressMaxFailedTxsPerHour') ?? 3;
+  }
 }
