@@ -9,6 +9,7 @@ import { Address, ITransactionOnNetwork, Transaction, TransactionPayload, Transa
 import { RelayerService } from "../endpoints/relayer/relayer.service";
 import { TransactionUtils } from "../endpoints/paymaster/transaction.utils";
 import { ApiService } from "../common/api/api.service";
+import { SignerUtils } from "../utils/signer.utils";
 
 @Injectable()
 export class SwapService {
@@ -22,7 +23,8 @@ export class SwapService {
     private readonly configService: ApiConfigService,
     private readonly tokenService: TokenService,
     private readonly relayerService: RelayerService,
-    private readonly apiService: ApiService
+    private readonly apiService: ApiService,
+    private readonly signerUtils: SignerUtils
   ) {
     this.logger = new Logger(SwapService.name);
 
@@ -100,7 +102,7 @@ export class SwapService {
 
   async buildTransaction(tokenSwap: TokenSwap, nonce: number,): Promise<Transaction> {
     const networkConfig = await this.getNetworkConfig();
-    const relayerAddress = this.configService.getRelayerAddress();
+    const relayerAddress = this.signerUtils.getAddressFromPem();
 
     const payload = `ESDTTransfer@${tokenSwap.identifier}@${tokenSwap.amount}@${tokenSwap.swapParameters}`;
     const transaction = new Transaction({
