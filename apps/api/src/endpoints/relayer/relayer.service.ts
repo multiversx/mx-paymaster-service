@@ -10,7 +10,6 @@ import { OriginLogger } from "@multiversx/sdk-nestjs-common";
 import { PaymasterService } from "../paymaster/paymaster.service";
 import { RedlockService } from "@mvx-monorepo/common/redlock";
 import { RedisCacheService } from "@multiversx/sdk-nestjs-cache";
-import { SignerUtils } from "../../utils/signer.utils";
 import { ApiService } from "../../common/api/api.service";
 
 @Injectable()
@@ -26,11 +25,10 @@ export class RelayerService {
     private readonly paymasterServer: PaymasterService,
     private readonly redlockService: RedlockService,
     private readonly redisCacheService: RedisCacheService,
-    private readonly signerUtils: SignerUtils,
     private readonly apiService: ApiService,
   ) {
     this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
-    this.relayerAddress = this.signerUtils.getAddressFromPem();
+    this.relayerAddress = this.configService.getRelayerAddress();
   }
 
   async generateRelayedTx(paymasterTx: TransactionDetails): Promise<Transaction> {
