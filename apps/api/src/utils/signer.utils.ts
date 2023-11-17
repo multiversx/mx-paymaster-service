@@ -5,14 +5,23 @@ import { readFileSync } from "fs";
 
 @Injectable()
 export class SignerUtils {
+  private signer: UserSigner | null = null;
   constructor(private apiConfigService: ApiConfigService) { }
 
   public getAddressFromPem(): string {
+    return this.getSigner().getAddress().bech32();
+  }
+
+  public getSigner(): UserSigner {
+    if (!this.signer) {
+      this.initializeSigner();
+    }
+    return this.signer as UserSigner;
+  }
+
+  private initializeSigner(): void {
     const pemFilePath = this.apiConfigService.getRelayerPEMFilePath();
-
     const pemFileContent = readFileSync(pemFilePath, 'utf8');
-    const signer = UserSigner.fromPem(pemFileContent);
-
-    return signer.getAddress().bech32();
+    this.signer = UserSigner.fromPem(pemFileContent);
   }
 }
