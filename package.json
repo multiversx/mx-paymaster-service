@@ -21,7 +21,6 @@
     "start:custom:watch": "npm run copy-custom-config & nest build api & nest start --watch",
     "start:custom:debug": "npm run copy-custom-config & nest build api & nest start --watch --debug",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
-    "init": "rimraf dist",
     "lint:fix": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
     "test": "node --expose-gc --no-compilation-cache ./node_modules/.bin/jest --logHeapUsage --detectOpenHandles --forceExit --logHeapUsage --maxWorkers=2",
     "test:watch": "jest --watch",
