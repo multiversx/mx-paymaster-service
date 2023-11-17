@@ -5,6 +5,8 @@ import { TokenModule } from "../tokens/token.module";
 import { DynamicModuleUtils } from "@mvx-monorepo/common";
 import configuration from '../../../config/configuration';
 import { RedlockModule } from "@mvx-monorepo/common/redlock";
+import { SignerUtils } from "../../utils/signer.utils";
+import { ApiService } from "../../common/api/api.service";
 
 @Module({
   imports: [
@@ -15,6 +17,8 @@ import { RedlockModule } from "@mvx-monorepo/common/redlock";
   providers: [
     PaymasterService,
     RelayerService,
+    SignerUtils,
+    ApiService,
   ],
   exports: [RelayerService],
 })
