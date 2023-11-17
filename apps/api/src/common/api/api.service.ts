@@ -3,6 +3,7 @@ import { ApiNetworkProvider } from "@multiversx/sdk-network-providers/out";
 import { ApiConfigService } from "@mvx-monorepo/common";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { SignerUtils } from "../../utils/signer.utils";
+import { Address } from "@multiversx/sdk-core/out";
 
 @Injectable()
 export class ApiService {
@@ -62,5 +63,15 @@ export class ApiService {
       this.logger.error(`Get relayer token request failed with error: ${error}`);
       return undefined;
     }
+  }
+
+  async getAccountNonce(address: string): Promise<number> {
+    const result = await this.networkProvider.getAccount(new Address(address));
+
+    if (!result) {
+      throw new Error('Could not fetch account data');
+    }
+
+    return result.nonce;
   }
 }

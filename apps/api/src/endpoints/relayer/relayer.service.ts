@@ -10,6 +10,8 @@ import { OriginLogger } from "@multiversx/sdk-nestjs-common";
 import { PaymasterService } from "../paymaster/paymaster.service";
 import { RedlockService } from "@mvx-monorepo/common/redlock";
 import { RedisCacheService } from "@multiversx/sdk-nestjs-cache";
+import { SignerUtils } from "../../utils/signer.utils";
+import { ApiService } from "../../common/api/api.service";
 
 @Injectable()
 export class RelayerService {
@@ -24,9 +26,11 @@ export class RelayerService {
     private readonly paymasterServer: PaymasterService,
     private readonly redlockService: RedlockService,
     private readonly redisCacheService: RedisCacheService,
+    private readonly signerUtils: SignerUtils,
+    private readonly apiService: ApiService,
   ) {
     this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
-    this.relayerAddress = this.configService.getRelayerAddress();
+    this.relayerAddress = this.signerUtils.getAddressFromPem();
   }
 
   async generateRelayedTx(paymasterTx: TransactionDetails): Promise<Transaction> {
@@ -154,7 +158,7 @@ export class RelayerService {
     let attempts = 0;
     while (attempts <= maxAttempts) {
       try {
-        const nonce = await this.getNonceRaw(this.relayerAddress);
+        const nonce = await this.apiService.getAccountNonce(this.relayerAddress);
 
         await this.redisCacheService.set(
           CacheInfo.RelayerNonce(this.relayerAddress).key,
@@ -170,16 +174,6 @@ export class RelayerService {
     }
 
     throw new Error('Could not fetch account nonce');
-  }
-
-  async getNonceRaw(address: string): Promise<number> {
-    const account = await this.networkProvider.getAccount(new Address(address));
-
-    if (!account) {
-      throw new Error('Could not fetch account data');
-    }
-
-    return account.nonce;
   }
 
   async incrementNonce(currentNonce: number): Promise<number | undefined> {
