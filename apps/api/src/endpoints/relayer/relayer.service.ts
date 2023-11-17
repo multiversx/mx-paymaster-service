@@ -11,6 +11,7 @@ import { PaymasterService } from "../paymaster/paymaster.service";
 import { RedlockService } from "@mvx-monorepo/common/redlock";
 import { RedisCacheService } from "@multiversx/sdk-nestjs-cache";
 import { ApiService } from "../../common/api/api.service";
+import { SignerUtils } from "../../utils/signer.utils";
 
 @Injectable()
 export class RelayerService {
@@ -25,8 +26,9 @@ export class RelayerService {
     private readonly redlockService: RedlockService,
     private readonly redisCacheService: RedisCacheService,
     private readonly apiService: ApiService,
+    private readonly signerUtils: SignerUtils
   ) {
-    this.relayerAddress = this.configService.getRelayerAddress();
+    this.relayerAddress = this.signerUtils.getAddressFromPem();
   }
 
   async generateRelayedTx(paymasterTx: TransactionDetails): Promise<Transaction> {
