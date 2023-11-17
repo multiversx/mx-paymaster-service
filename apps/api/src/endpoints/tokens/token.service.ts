@@ -1,21 +1,17 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { ApiNetworkProvider } from '@multiversx/sdk-network-providers/out';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { ApiConfigService, CacheInfo } from '@mvx-monorepo/common';
 import BigNumber from 'bignumber.js';
 import { CacheService } from '@multiversx/sdk-nestjs-cache';
 import { Constants } from '@multiversx/sdk-nestjs-common';
 import { TokenConfig } from './entities/token.config';
-
+import { ApiService } from '../../common/api/api.service';
 @Injectable()
 export class TokenService {
-  private readonly networkProvider: ApiNetworkProvider;
-
   constructor(
     private readonly configService: ApiConfigService,
-    private readonly cachingService: CacheService
-  ) {
-    this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
-  }
+    private readonly cachingService: CacheService,
+    private readonly apiService: ApiService,
+  ) { }
 
   findAll(): TokenConfig[] {
     const tokens = this.configService.getAcceptedTokens();
@@ -41,39 +37,19 @@ export class TokenService {
   async getTokenDetails(tokenIdentifier: string): Promise<any> {
     return await this.cachingService.getOrSet(
       CacheInfo.TokenDetails(tokenIdentifier).key,
-      async () => await this.getTokenDetailsRaw(tokenIdentifier),
+      async () => await this.apiService.getTokenDetailsRaw(tokenIdentifier),
       CacheInfo.TokenDetails(tokenIdentifier).ttl,
       Constants.oneSecond()
     );
   }
 
-  async getTokenDetailsRaw(tokenIdentifier: string): Promise<any> {
-    const url = `tokens/${tokenIdentifier}`;
-
-    try {
-      return await this.networkProvider.doGetGeneric(url);
-    } catch (error) {
-      throw new BadRequestException('Invalid token identifier');
-    }
-  }
-
   async getEGLDPrice(): Promise<number> {
     return await this.cachingService.getOrSet(
       CacheInfo.EgldPrice.key,
-      async () => await this.getEGLDPriceRaw(),
+      async () => await this.apiService.getEgldPriceRaw(),
       CacheInfo.EgldPrice.ttl,
       Constants.oneSecond() * 3
     );
-  }
-
-  async getEGLDPriceRaw(): Promise<number> {
-    const url = `economics?extract=price`;
-
-    try {
-      return await this.networkProvider.doGetGeneric(url);
-    } catch (error) {
-      throw new BadRequestException('Invalid token identifier');
-    }
   }
 
   convertEGLDtoToken(
