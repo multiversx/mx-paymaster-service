@@ -376,4 +376,8 @@ export class ApiConfigService {
   getNumberOfShards(): number {
     return this.configService.get<number>('numberOfShards') ?? 3;
   }
+
+  getIsDrainProtectionFeatureActive(): boolean {
+    return this.configService.get<boolean>('features.drainProtection.enabled') ?? true;
+  }
 }

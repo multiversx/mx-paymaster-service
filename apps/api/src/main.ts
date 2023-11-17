@@ -24,6 +24,7 @@ import '@multiversx/sdk-nestjs-common/lib/utils/extensions/number.extensions';
 import '@multiversx/sdk-nestjs-common/lib/utils/extensions/string.extensions';
 import configuration from '../config/configuration';
 import { SwapModule } from './autoswap/swap.module';
+import { DrainProtectionModule } from './drain-protection/drain.protection.module';
 
 async function bootstrap() {
   const publicApp = await NestFactory.create(PublicAppModule);
@@ -103,6 +104,12 @@ async function bootstrap() {
     await autoSwapApp.listen(7777);
   }
 
+  if (apiConfigService.getIsDrainProtectionFeatureActive()) {
+    const drainProtectionApp = await NestFactory.create(DrainProtectionModule);
+    drainProtectionApp.setGlobalPrefix(globalPrefix);
+    await drainProtectionApp.listen(7778);
+  }
+
   const logger = new Logger('Bootstrapper');
 
   LoggerInitializer.initialize(logger);
@@ -131,6 +138,7 @@ async function bootstrap() {
   logger.log(`Public API active: ${apiConfigService.getIsPublicApiFeatureActive()}`);
   logger.log(`Private API active: ${apiConfigService.getIsPrivateApiFeatureActive()}`);
   logger.log(`AutoSwap active: ${apiConfigService.getIsAutoSwapFeatureActive()}`);
+  logger.log(`Drain Protection active: ${apiConfigService.getIsDrainProtectionFeatureActive()}`);
 }
 
 // eslint-disable-next-line @typescript-eslint/no-floating-promises
