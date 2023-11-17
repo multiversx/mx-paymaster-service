@@ -1,9 +1,9 @@
 import { OriginLogger } from "@multiversx/sdk-nestjs-common";
-import { ApiNetworkProvider } from "@multiversx/sdk-network-providers/out";
+import { ApiNetworkProvider, NetworkConfig } from "@multiversx/sdk-network-providers/out";
 import { ApiConfigService } from "@mvx-monorepo/common";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { SignerUtils } from "../../utils/signer.utils";
-import { Address } from "@multiversx/sdk-core/out";
+import { Address, Transaction } from "@multiversx/sdk-core/out";
 
 @Injectable()
 export class ApiService {
@@ -73,5 +73,27 @@ export class ApiService {
     }
 
     return result.nonce;
+  }
+
+  async broadcastTransaction(transaction: Transaction): Promise<string> {
+    try {
+      const hash = await this.networkProvider.sendTransaction(transaction);
+      return hash;
+    } catch (error) {
+      this.logger.error(`Broadcast attempt failed: ${error}`);
+      throw error;
+    }
+  }
+
+  async loadNetworkConfig(): Promise<NetworkConfig> {
+    try {
+      const networkConfig: NetworkConfig = await this.networkProvider.getNetworkConfig();
+
+      return networkConfig;
+    } catch (error) {
+      this.logger.error(error);
+      this.logger.log(`Unexpected error when trying to load network config`);
+      throw new Error('Error when loading network config');
+    }
   }
 }

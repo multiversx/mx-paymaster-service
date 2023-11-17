@@ -3,7 +3,7 @@ import { TransactionDetails } from "../paymaster/entities/transaction.details";
 import { Address, RelayedTransactionV2Builder, Transaction } from "@multiversx/sdk-core/out";
 import { TransactionUtils } from "../paymaster/transaction.utils";
 import { ApiConfigService, CacheInfo } from "@mvx-monorepo/common";
-import { ApiNetworkProvider, NetworkConfig } from "@multiversx/sdk-network-providers/out";
+import { NetworkConfig } from "@multiversx/sdk-network-providers/out";
 import { promises } from "fs";
 import { UserSigner } from "@multiversx/sdk-wallet/out";
 import { OriginLogger } from "@multiversx/sdk-nestjs-common";
@@ -15,7 +15,6 @@ import { ApiService } from "../../common/api/api.service";
 @Injectable()
 export class RelayerService {
   private readonly logger = new OriginLogger(RelayerService.name);
-  private readonly networkProvider: ApiNetworkProvider;
   private relayerSigner!: UserSigner;
   private networkConfig: NetworkConfig | undefined = undefined;
   private relayerAddress: string;
@@ -27,7 +26,6 @@ export class RelayerService {
     private readonly redisCacheService: RedisCacheService,
     private readonly apiService: ApiService,
   ) {
-    this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
     this.relayerAddress = this.configService.getRelayerAddress();
   }
 
@@ -73,7 +71,7 @@ export class RelayerService {
         const relayerSignature = await this.signTx(transaction);
         transaction.applySignature(relayerSignature);
 
-        const hash = await this.broadcastTransaction(transaction);
+        const hash = await this.apiService.broadcastTransaction(transaction);
         this.logger.log(`Successful broadcast of transaction ${hash} with nonce ${transaction.getNonce().valueOf()}`);
 
         await this.incrementNonce(nonce);
@@ -137,16 +135,6 @@ export class RelayerService {
     }
   }
 
-  async broadcastTransaction(transaction: Transaction): Promise<string> {
-    try {
-      const hash = await this.networkProvider.sendTransaction(transaction);
-      return hash;
-    } catch (error) {
-      this.logger.warn(`Broadcast attempt failed: ${error}`);
-      throw error;
-    }
-  }
-
   async getNonce(maxAttempts: number = 5): Promise<number> {
     const redisNonce = await this.redisCacheService.get<number>(CacheInfo.RelayerNonce(this.relayerAddress).key);
     if (typeof redisNonce !== 'undefined') {
@@ -203,23 +191,10 @@ export class RelayerService {
 
   async getNetworkConfig(): Promise<NetworkConfig> {
     if (!this.networkConfig) {
-      this.networkConfig = await this.loadNetworkConfig();
+      this.networkConfig = await this.apiService.loadNetworkConfig();
     }
 
     return this.networkConfig;
-  }
-
-  async loadNetworkConfig(): Promise<NetworkConfig> {
-    try {
-      const networkConfig: NetworkConfig = await this.networkProvider.getNetworkConfig();
-
-      return networkConfig;
-    } catch (error) {
-      this.logger.log(`Unexpected error when trying to load network config`);
-      this.logger.error(error);
-
-      throw new Error('Error when loading network config');
-    }
   }
 
   private isNonceTransactionError(error: string): boolean {
