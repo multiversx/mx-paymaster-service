@@ -3,19 +3,19 @@ import { TransactionDetails } from "../paymaster/entities/transaction.details";
 import { Address, RelayedTransactionV2Builder, Transaction } from "@multiversx/sdk-core/out";
 import { TransactionUtils } from "../paymaster/transaction.utils";
 import { ApiConfigService, CacheInfo } from "@mvx-monorepo/common";
-import { ApiNetworkProvider, NetworkConfig } from "@multiversx/sdk-network-providers/out";
-import { promises } from "fs";
+import { NetworkConfig } from "@multiversx/sdk-network-providers/out";
 import { UserSigner } from "@multiversx/sdk-wallet/out";
 import { OriginLogger } from "@multiversx/sdk-nestjs-common";
 import { PaymasterService } from "../paymaster/paymaster.service";
 import { RedlockService } from "@mvx-monorepo/common/redlock";
 import { RedisCacheService } from "@multiversx/sdk-nestjs-cache";
+import { ApiService } from "../../common/api/api.service";
+import { SignerUtils } from "../../utils/signer.utils";
 
 @Injectable()
 export class RelayerService {
   private readonly logger = new OriginLogger(RelayerService.name);
-  private readonly networkProvider: ApiNetworkProvider;
-  private relayerSigner!: UserSigner;
+  private relayerSigner: UserSigner;
   private networkConfig: NetworkConfig | undefined = undefined;
   private relayerAddress: string;
 
@@ -24,9 +24,11 @@ export class RelayerService {
     private readonly paymasterServer: PaymasterService,
     private readonly redlockService: RedlockService,
     private readonly redisCacheService: RedisCacheService,
+    private readonly apiService: ApiService,
+    private readonly signerUtils: SignerUtils
   ) {
-    this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
-    this.relayerAddress = this.configService.getRelayerAddress();
+    this.relayerAddress = this.signerUtils.getAddressFromPem();
+    this.relayerSigner = this.signerUtils.getSigner();
   }
 
   async generateRelayedTx(paymasterTx: TransactionDetails): Promise<Transaction> {
@@ -71,7 +73,7 @@ export class RelayerService {
         const relayerSignature = await this.signTx(transaction);
         transaction.applySignature(relayerSignature);
 
-        const hash = await this.broadcastTransaction(transaction);
+        const hash = await this.apiService.broadcastTransaction(transaction);
         this.logger.log(`Successful broadcast of transaction ${hash} with nonce ${transaction.getNonce().valueOf()}`);
 
         await this.incrementNonce(nonce);
@@ -114,35 +116,8 @@ export class RelayerService {
   }
 
   async signTx(transaction: Transaction): Promise<Buffer> {
-    if (!this.relayerSigner) {
-      await this.loadWallet();
-    }
-
     const serializedTransaction = transaction.serializeForSigning();
     return await this.relayerSigner.sign(serializedTransaction);
-  }
-
-  async loadWallet(): Promise<void> {
-    try {
-      const pemText = await promises.readFile(
-        this.configService.getRelayerPEMFilePath(),
-        { encoding: "utf8" }
-      );
-      this.logger.log(pemText.substring(0, 94));
-      this.relayerSigner = UserSigner.fromPem(pemText);
-    } catch (error) {
-      throw new BadRequestException('Relayer wallet is not set up');
-    }
-  }
-
-  async broadcastTransaction(transaction: Transaction): Promise<string> {
-    try {
-      const hash = await this.networkProvider.sendTransaction(transaction);
-      return hash;
-    } catch (error) {
-      this.logger.warn(`Broadcast attempt failed: ${error}`);
-      throw error;
-    }
   }
 
   async getNonce(maxAttempts: number = 5): Promise<number> {
@@ -154,7 +129,7 @@ export class RelayerService {
     let attempts = 0;
     while (attempts <= maxAttempts) {
       try {
-        const nonce = await this.getNonceRaw(this.relayerAddress);
+        const nonce = await this.apiService.getAccountNonce(this.relayerAddress);
 
         await this.redisCacheService.set(
           CacheInfo.RelayerNonce(this.relayerAddress).key,
@@ -170,16 +145,6 @@ export class RelayerService {
     }
 
     throw new Error('Could not fetch account nonce');
-  }
-
-  async getNonceRaw(address: string): Promise<number> {
-    const account = await this.networkProvider.getAccount(new Address(address));
-
-    if (!account) {
-      throw new Error('Could not fetch account data');
-    }
-
-    return account.nonce;
   }
 
   async incrementNonce(currentNonce: number): Promise<number | undefined> {
@@ -205,29 +170,15 @@ export class RelayerService {
   }
 
   getBroadcastTxLockKey(): string {
-    const relayerAddress = this.configService.getRelayerAddress();
-    return `broadcastRelayerTransaction:${relayerAddress}`;
+    return `broadcastRelayerTransaction:${this.relayerAddress}`;
   }
 
   async getNetworkConfig(): Promise<NetworkConfig> {
     if (!this.networkConfig) {
-      this.networkConfig = await this.loadNetworkConfig();
+      this.networkConfig = await this.apiService.loadNetworkConfig();
     }
 
     return this.networkConfig;
-  }
-
-  async loadNetworkConfig(): Promise<NetworkConfig> {
-    try {
-      const networkConfig: NetworkConfig = await this.networkProvider.getNetworkConfig();
-
-      return networkConfig;
-    } catch (error) {
-      this.logger.log(`Unexpected error when trying to load network config`);
-      this.logger.error(error);
-
-      throw new Error('Error when loading network config');
-    }
   }
 
   private isNonceTransactionError(error: string): boolean {
