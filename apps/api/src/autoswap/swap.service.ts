@@ -1,4 +1,4 @@
-import { ApiNetworkProvider, NetworkConfig } from "@multiversx/sdk-network-providers/out";
+import { NetworkConfig } from "@multiversx/sdk-network-providers/out";
 import { ApiConfigService } from "@mvx-monorepo/common";
 import { Injectable, Logger } from "@nestjs/common";
 import { TokenConfig } from "../endpoints/tokens/entities/token.config";
@@ -8,23 +8,25 @@ import { TokenSwap } from "./entities/token.swap";
 import { Address, ITransactionOnNetwork, Transaction, TransactionPayload, TransactionWatcher } from "@multiversx/sdk-core/out";
 import { RelayerService } from "../endpoints/relayer/relayer.service";
 import { TransactionUtils } from "../endpoints/paymaster/transaction.utils";
+import { ApiService } from "../common/api/api.service";
+import { SignerUtils } from "../utils/signer.utils";
 
 @Injectable()
 export class SwapService {
-  private readonly networkProvider: ApiNetworkProvider;
   private readonly logger: Logger;
   private readonly tokens: TokenConfig[];
-  private networkConfig!: NetworkConfig;
+  private networkConfig: NetworkConfig | undefined = undefined;
   private transactionWatcher!: TransactionWatcher;
 
   constructor(
     private readonly configService: ApiConfigService,
     private readonly tokenService: TokenService,
     private readonly relayerService: RelayerService,
+    private readonly apiService: ApiService,
+    private readonly signerUtils: SignerUtils
   ) {
     this.logger = new Logger(SwapService.name);
 
-    this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
     this.tokens = this.tokenService.findAll();
   }
 
@@ -38,32 +40,23 @@ export class SwapService {
     );
 
     const tokenIdentifiers = tokensToBeSwapped.map(elem => elem.identifier).toString();
-    const relayerAddress = this.configService.getRelayerAddress();
+    const accountTokens = await this.apiService.getAccountTokenByIdentifiers(tokenIdentifiers);
 
-    const url = `accounts/${relayerAddress}/tokens?identifiers=${tokenIdentifiers}`;
+    return accountTokens.filter((elem: any) => {
+      const currentToken = tokensToBeSwapped.find((token) => elem.identifier === token.identifier);
+      const swapThreshold = BigNumber(currentToken?.swapMinAmount ?? 0);
 
-    try {
-      const accountTokens = await this.networkProvider.doGetGeneric(url);
-
-      return accountTokens.filter((elem: any) => {
-        const currentToken = tokensToBeSwapped.find((token) => elem.identifier === token.identifier);
-        const swapThreshold = BigNumber(currentToken?.swapMinAmount ?? 0);
-
-        return BigNumber(elem.balance).gte(swapThreshold);
-      }).map((elem: any) => {
-        const currentToken = tokensToBeSwapped.find((token) => elem.identifier === token.identifier);
-        return {
-          identifier: elem.identifier,
-          swapContract: currentToken?.swapContract,
-          swapParameters: currentToken?.swapParameters,
-          swapGasLimit: currentToken?.swapGasLimit,
-          amount: elem.balance,
-        };
-      });
-    } catch (error) {
-      this.logger.error(`Get relayer token balance request failed with error: ${error}`);
-      throw new Error('Fetch relayer token balance request failed.');
-    }
+      return BigNumber(elem.balance).gte(swapThreshold);
+    }).map((elem: any) => {
+      const currentToken = tokensToBeSwapped.find((token) => elem.identifier === token.identifier);
+      return {
+        identifier: elem.identifier,
+        swapContract: currentToken?.swapContract,
+        swapParameters: currentToken?.swapParameters,
+        swapGasLimit: currentToken?.swapGasLimit,
+        amount: elem.balance,
+      };
+    });
   }
 
   async getUnwrapSwap(): Promise<TokenSwap | undefined> {
@@ -72,30 +65,28 @@ export class SwapService {
 
     if (!wrappedEgld || !wrappedEgld.swapContract || !wrappedEgld.swapMinAmount ||
       !wrappedEgld.swapGasLimit || !wrappedEgld.swapParameters) {
-      return undefined;
-    }
-
-    const relayerAddress = this.configService.getRelayerAddress();
-    const url = `accounts/${relayerAddress}/tokens/${wrappedEgldIdentifier}`;
-
-    try {
-      const accountWrappedEgld = await this.networkProvider.doGetGeneric(url);
-      const swapThreshold = BigNumber(wrappedEgld.swapMinAmount ?? 0);
-
-      if (BigNumber(accountWrappedEgld.balance).lt(swapThreshold)) {
-        return undefined;
-      }
-
-      return {
-        identifier: wrappedEgldIdentifier,
-        swapContract: wrappedEgld.swapContract,
-        swapParameters: wrappedEgld.swapParameters,
-        swapGasLimit: wrappedEgld?.swapGasLimit,
-        amount: accountWrappedEgld.balance,
-      };
-    } catch (error) {
       return;
     }
+
+    const accountTokens = await this.apiService.getAccountTokenByIdentifiers(wrappedEgldIdentifier);
+    if (accountTokens.length === 0) {
+      return;
+    }
+
+    const accountBalance = accountTokens[0].balance;
+    const swapThreshold = BigNumber(wrappedEgld.swapMinAmount ?? 0);
+
+    if (BigNumber(accountBalance).lt(swapThreshold)) {
+      return;
+    }
+
+    return {
+      identifier: wrappedEgldIdentifier,
+      swapContract: wrappedEgld.swapContract,
+      swapParameters: wrappedEgld.swapParameters,
+      swapGasLimit: wrappedEgld?.swapGasLimit,
+      amount: accountBalance,
+    };
   }
 
   async executeUnwrap(): Promise<void | undefined> {
@@ -114,7 +105,7 @@ export class SwapService {
 
   async buildTransaction(tokenSwap: TokenSwap, nonce: number,): Promise<Transaction> {
     const networkConfig = await this.getNetworkConfig();
-    const relayerAddress = this.configService.getRelayerAddress();
+    const relayerAddress = this.signerUtils.getAddressFromPem();
 
     const payload = `ESDTTransfer@${tokenSwap.identifier}@${tokenSwap.amount}@${tokenSwap.swapParameters}`;
     const transaction = new Transaction({
@@ -170,7 +161,7 @@ export class SwapService {
 
   async getNetworkConfig(): Promise<NetworkConfig> {
     if (!this.networkConfig) {
-      this.networkConfig = await this.networkProvider.getNetworkConfig();
+      this.networkConfig = await this.apiService.loadNetworkConfig();
     }
 
     return this.networkConfig;
@@ -178,7 +169,7 @@ export class SwapService {
 
   getTransactionWatcher(): TransactionWatcher {
     if (!this.transactionWatcher) {
-      this.transactionWatcher = new TransactionWatcher(this.networkProvider);
+      this.transactionWatcher = new TransactionWatcher(this.apiService.getNetworkProvider());
     }
 
     return this.transactionWatcher;
