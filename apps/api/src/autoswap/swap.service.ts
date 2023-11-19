@@ -65,14 +65,19 @@ export class SwapService {
 
     if (!wrappedEgld || !wrappedEgld.swapContract || !wrappedEgld.swapMinAmount ||
       !wrappedEgld.swapGasLimit || !wrappedEgld.swapParameters) {
-      return undefined;
+      return;
     }
 
-    const accountWrappedEgld = await this.apiService.getAccountToken(wrappedEgldIdentifier);
+    const accountTokens = await this.apiService.getAccountTokenByIdentifiers(wrappedEgldIdentifier);
+    if (accountTokens.length === 0) {
+      return;
+    }
+
+    const accountBalance = accountTokens[0].balance;
     const swapThreshold = BigNumber(wrappedEgld.swapMinAmount ?? 0);
 
-    if (BigNumber(accountWrappedEgld.balance).lt(swapThreshold)) {
-      return undefined;
+    if (BigNumber(accountBalance).lt(swapThreshold)) {
+      return;
     }
 
     return {
@@ -80,7 +85,7 @@ export class SwapService {
       swapContract: wrappedEgld.swapContract,
       swapParameters: wrappedEgld.swapParameters,
       swapGasLimit: wrappedEgld?.swapGasLimit,
-      amount: accountWrappedEgld.balance,
+      amount: accountBalance,
     };
   }
 

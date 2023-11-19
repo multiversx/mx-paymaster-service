@@ -54,17 +54,6 @@ export class ApiService {
     }
   }
 
-  async getAccountToken(wrappedEgldIdentifier: string): Promise<any> {
-    try {
-      const url = `accounts/${this.relayerAddress}/tokens/${wrappedEgldIdentifier}`;
-      const response = await this.networkProvider.doGetGeneric(url);
-      return response;
-    } catch (error) {
-      this.logger.error(`Get relayer token request failed with error: ${error}`);
-      return undefined;
-    }
-  }
-
   async getAccountNonce(address: string): Promise<number> {
     const result = await this.networkProvider.getAccount(new Address(address));
 
