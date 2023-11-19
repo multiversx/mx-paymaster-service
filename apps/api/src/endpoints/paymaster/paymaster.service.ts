@@ -19,30 +19,30 @@ import { CacheService } from "@multiversx/sdk-nestjs-cache";
 import { CachedPaymasterTxData } from "./entities/cached.paymaster.tx.data";
 import { TokenService } from "../tokens/token.service";
 import { TransactionUtils } from "./transaction.utils";
-import { ApiNetworkProvider, NetworkConfig } from "@multiversx/sdk-network-providers/out";
+import { NetworkConfig } from "@multiversx/sdk-network-providers/out";
 import { TokenConfig } from "../tokens/entities/token.config";
 import { PaymasterArguments } from "./entities/paymaster.arguments";
 import { AddressUtils } from "@multiversx/sdk-nestjs-common";
 import { PaymasterAbiJson } from "../../abis/paymaster.abi";
 import { SignerUtils } from "../../utils/signer.utils";
+import { ApiService } from "../../common/api/api.service";
 
 @Injectable()
 export class PaymasterService {
   private readonly logger: Logger;
   private readonly contractLoader: ContractLoader;
-  private readonly networkProvider: ApiNetworkProvider;
   private networkConfig: NetworkConfig | undefined = undefined;
 
   constructor(
     private readonly configService: ApiConfigService,
     private readonly cacheService: CacheService,
     private readonly tokenService: TokenService,
+    private readonly apiService: ApiService,
     private readonly signerUtils: SignerUtils
   ) {
     this.logger = new Logger(PaymasterService.name);
 
     this.contractLoader = new ContractLoader(PaymasterAbiJson);
-    this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
   }
 
   async getRelayerPayment(feeEgldAmount: BigNumber, token: TokenConfig): Promise<TokenTransfer> {
@@ -210,22 +210,9 @@ export class PaymasterService {
 
   async getNetworkConfig(): Promise<NetworkConfig> {
     if (!this.networkConfig) {
-      this.networkConfig = await this.loadNetworkConfig();
+      this.networkConfig = await this.apiService.loadNetworkConfig();
     }
 
     return this.networkConfig;
-  }
-
-  async loadNetworkConfig(): Promise<NetworkConfig> {
-    try {
-      const networkConfig: NetworkConfig = await this.networkProvider.getNetworkConfig();
-
-      return networkConfig;
-    } catch (error) {
-      this.logger.log(`Unexpected error when trying to load network config`);
-      this.logger.error(error);
-
-      throw new Error('Error when loading network config');
-    }
   }
 }
