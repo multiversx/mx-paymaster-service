@@ -1,38 +1,74 @@
-import { Test, TestingModule } from "@nestjs/testing";
+import { Test } from "@nestjs/testing";
 import { PaymasterService } from "../paymaster.service";
-import { TokenModule } from "../../tokens/token.module";
-import { ApiConfigService, DynamicModuleUtils } from "@mvx-monorepo/common";
+import { ApiConfigService } from "@mvx-monorepo/common";
 import { TransactionDetails } from "../entities/transaction.details";
 import { TokenService } from "../../tokens/token.service";
 import { BadRequestException } from "@nestjs/common";
 import { Address, TokenTransfer, Transaction, TransactionPayload } from "@multiversx/sdk-core/out";
 import BigNumber from "bignumber.js";
 import { TokenConfig } from "../../tokens/entities/token.config";
-import configuration from "../../../../config/configuration";
+import { ApiService } from "../../../common/api/api.service";
+import { CacheService } from "@multiversx/sdk-nestjs-cache";
+import { NetworkConfig } from "@multiversx/sdk-network-providers/out";
+import { SignerUtils } from "../../../../src/utils/signer.utils";
 
 describe('PaymasterService', () => {
-  let module: TestingModule;
   let service: PaymasterService;
   let configService: ApiConfigService;
+  let apiService: ApiService;
   let tokenService: TokenService;
+  let cacheService: CacheService;
+  let signerUtils: SignerUtils;
 
   beforeAll(async () => {
-    module = await Test.createTestingModule({
-      imports: [
-        TokenModule,
-        // ConfigModule.forRoot({}),
-        // ApiConfigModule.forRoot(configuration),
-        // ApiConfigModule
-        DynamicModuleUtils.getCachingModule(configuration),
-      ],
+    const moduleRef = await Test.createTestingModule({
       providers: [
         PaymasterService,
+        {
+          provide: ApiConfigService,
+          useValue: {
+            getNumberOfShards: jest.fn(),
+            getPaymasterContractAddress: jest.fn(),
+            getPaymasterGasLimit: jest.fn(),
+            getWrappedEGLDIdentifier: jest.fn(),
+          },
+        },
+        {
+          provide: CacheService,
+          useValue: {
+            setRemote: jest.fn(),
+          },
+        },
+        {
+          provide: ApiService,
+          useValue: {
+            loadNetworkConfig: jest.fn(),
+          },
+        },
+        {
+          provide: TokenService,
+          useValue: {
+            getEGLDPrice: jest.fn(),
+            getTokenDetails: jest.fn(),
+            findByIdentifier: jest.fn(),
+            convertEGLDtoToken: jest.fn(),
+          },
+        },
+        {
+          provide: SignerUtils,
+          useValue: {
+            getAddressFromPem: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
-    service = module.get<PaymasterService>(PaymasterService);
-    configService = await module.resolve<ApiConfigService>(ApiConfigService);
-    tokenService = module.get<TokenService>(TokenService);
+    service = moduleRef.get<PaymasterService>(PaymasterService);
+    configService = moduleRef.get<ApiConfigService>(ApiConfigService);
+    apiService = moduleRef.get<ApiService>(ApiService);
+    tokenService = moduleRef.get<TokenService>(TokenService);
+    cacheService = moduleRef.get<CacheService>(CacheService);
+    signerUtils = moduleRef.get<SignerUtils>(SignerUtils);
   });
 
   it('should be defined', () => {
@@ -76,6 +112,7 @@ describe('PaymasterService', () => {
         price: 2,
         decimals: 6,
       });
+      jest.spyOn(tokenService, 'convertEGLDtoToken').mockReturnValue(BigNumber(9750));
 
       const tokenAmount = await service.getRelayerPayment(BigNumber('650000000000000'), token);
 
@@ -150,12 +187,16 @@ describe('PaymasterService', () => {
         feeAmount: '35000',
         feePercentage: 0.5,
       });
+      jest.spyOn(configService, 'getNumberOfShards').mockReturnValue(3);
       jest.spyOn(configService, 'getPaymasterContractAddress').mockReturnValue(paymasterAddress);
-      jest.spyOn(configService, 'getRelayerAddress').mockReturnValue(relayerAddress);
+      jest.spyOn(signerUtils, 'getAddressFromPem').mockReturnValue(relayerAddress);
       jest.spyOn(configService, 'getPaymasterGasLimit').mockReturnValueOnce(7000000);
       jest.spyOn(service, 'getRelayerPayment').mockResolvedValueOnce(
         TokenTransfer.fungibleFromBigInteger(tokenIdentifier, BigNumber('40000'), 6)
       );
+      jest.spyOn(configService, 'getWrappedEGLDIdentifier').mockReturnValueOnce('WEGLD-123456');
+      jest.spyOn(cacheService, 'setRemote').mockResolvedValue();
+      jest.spyOn(apiService, 'loadNetworkConfig').mockResolvedValue(new NetworkConfig());
 
       const paymasterTx = await service.generatePaymasterTx(txDetails, tokenIdentifier);
 

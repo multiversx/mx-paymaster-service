@@ -2,18 +2,12 @@ import { BadRequestException, Injectable, Logger, NotFoundException } from "@nes
 import { TransactionDetails } from "./entities/transaction.details";
 import {
   Address,
-  AddressValue,
-  BytesType,
-  BytesValue,
-  SmartContract,
   TokenTransfer,
   Transaction,
   TransactionHash,
   TypedValue,
-  VariadicType,
-  VariadicValue,
 } from "@multiversx/sdk-core/out";
-import { ApiConfigService, CacheInfo, ContractLoader } from "@mvx-monorepo/common";
+import { AbiPaymaster, ApiConfigService, CacheInfo } from "@mvx-monorepo/common";
 import BigNumber from "bignumber.js";
 import { CacheService } from "@multiversx/sdk-nestjs-cache";
 import { CachedPaymasterTxData } from "./entities/cached.paymaster.tx.data";
@@ -21,17 +15,15 @@ import { TokenService } from "../tokens/token.service";
 import { TransactionUtils } from "./transaction.utils";
 import { NetworkConfig } from "@multiversx/sdk-network-providers/out";
 import { TokenConfig } from "../tokens/entities/token.config";
-import { PaymasterArguments } from "./entities/paymaster.arguments";
 import { AddressUtils } from "@multiversx/sdk-nestjs-common";
-import { PaymasterAbiJson } from "../../abis/paymaster.abi";
 import { SignerUtils } from "../../utils/signer.utils";
 import { ApiService } from "../../common/api/api.service";
 
 @Injectable()
 export class PaymasterService {
   private readonly logger: Logger;
-  private readonly contractLoader: ContractLoader;
   private networkConfig: NetworkConfig | undefined = undefined;
+  private readonly abiPaymaster = new AbiPaymaster();
 
   constructor(
     private readonly configService: ApiConfigService,
@@ -41,8 +33,6 @@ export class PaymasterService {
     private readonly signerUtils: SignerUtils
   ) {
     this.logger = new Logger(PaymasterService.name);
-
-    this.contractLoader = new ContractLoader(PaymasterAbiJson);
   }
 
   async getRelayerPayment(feeEgldAmount: BigNumber, token: TokenConfig): Promise<TokenTransfer> {
@@ -85,26 +75,17 @@ export class PaymasterService {
     }
 
     const receiverAddress = Address.fromBech32(metadata.receiver);
-    const numberOfShards = this.configService.getNumberOfShards();
-    const receiverShard = AddressUtils.computeShard(receiverAddress.hex(), numberOfShards);
 
-    const paymasterAddress = this.configService.getPaymasterContractAddress(receiverShard);
-    const contract = this.contractLoader.getContract(paymasterAddress);
     const relayerAddress = this.signerUtils.getAddressFromPem();
     const gasLimit = this.configService.getPaymasterGasLimit() + txDetails.gasLimit;
 
-    const typedArguments = this.getTypedSCArguments({
-      relayerAddress: relayerAddress,
-      destinationAddress: metadata.receiver,
-      functionName: metadata.functionName ?? '',
-      functionParams: metadata.functionArgs,
-    });
+    const typedArguments = this.abiPaymaster.getTypedSCArguments(relayerAddress, metadata);
 
     const existingTransfers = TransactionUtils.extractTransfersFromMetadata(metadata);
 
     const dummyRelayerTransfer = this.getDummyRelayerPayment();
     const tempTransfer = [dummyRelayerTransfer, ...existingTransfers];
-    const tempTransaction = this.buildPaymasterTx(txDetails, contract, typedArguments, tempTransfer, gasLimit);
+    const tempTransaction = await this.buildPaymasterTx(txDetails, receiverAddress, typedArguments, tempTransfer, gasLimit);
 
     const networkConfig = await this.getNetworkConfig();
     const fee = BigNumber(tempTransaction.computeFee(networkConfig));
@@ -112,7 +93,7 @@ export class PaymasterService {
       await this.getRelayerPayment(fee, token),
       ...existingTransfers,
     ];
-    const transaction = this.buildPaymasterTx(txDetails, contract, typedArguments, multiTransfer, 0);
+    const transaction = await this.buildPaymasterTx(txDetails, receiverAddress, typedArguments, multiTransfer, 0);
     transaction.setVersion(txDetails.version ?? 1);
     transaction.setOptions(0);
 
@@ -121,48 +102,19 @@ export class PaymasterService {
     return transaction;
   }
 
-  buildPaymasterTx(initialTx: TransactionDetails, contract: SmartContract, scArguments: TypedValue[], multiTransfer: TokenTransfer[], gasLimit: number):
-    Transaction {
-    const signerAddress = new Address(initialTx.sender);
-    const transaction = contract.methodsExplicit
-      .forwardExecution(
-        scArguments
-      ).withSender(
-        signerAddress
-      ).withGasLimit(
-        gasLimit
-      ).withGasPrice(
-        initialTx.gasPrice
-      ).withMultiESDTNFTTransfer(
-        multiTransfer
-      ).withNonce(
-        initialTx.nonce
-      ).withChainID(
-        initialTx.chainID
-      ).buildTransaction();
-    return transaction;
+  async buildPaymasterTx(initialTx: TransactionDetails, receiverAddress: Address, scArguments: TypedValue[], multiTransfer: TokenTransfer[], gasLimit: number):
+    Promise<Transaction> {
+    const numberOfShards = this.configService.getNumberOfShards();
+    const receiverShard = AddressUtils.computeShard(receiverAddress.hex(), numberOfShards);
+    const paymasterAddress = this.configService.getPaymasterContractAddress(receiverShard);
+
+    return await this.abiPaymaster.forwardExecution(initialTx.sender, paymasterAddress, scArguments, multiTransfer, gasLimit, initialTx.gasPrice, initialTx.nonce, initialTx.chainID);
   }
 
   getDummyRelayerPayment() {
     const wrappedEgldIdentifier = this.configService.getWrappedEGLDIdentifier();
     const dummyFee = BigNumber('0.00056').multipliedBy('1e+18');
     return TokenTransfer.fungibleFromBigInteger(wrappedEgldIdentifier, dummyFee, 18);
-  }
-
-  getTypedSCArguments(plainArguments: PaymasterArguments): TypedValue[] {
-    let endpointParams: TypedValue[] = [];
-    if (plainArguments.functionParams) {
-      endpointParams = plainArguments.functionParams.map((element) =>
-        BytesValue.fromHex(element)
-      );
-    }
-
-    return [
-      new AddressValue(new Address(plainArguments.relayerAddress)),
-      new AddressValue(new Address(plainArguments.destinationAddress)),
-      BytesValue.fromUTF8(plainArguments.functionName),
-      new VariadicValue(new VariadicType(new BytesType()), endpointParams),
-    ];
   }
 
   async setCachedTxData(transaction: Transaction, gasLimit: number) {
