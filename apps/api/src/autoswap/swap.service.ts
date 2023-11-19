@@ -1,4 +1,4 @@
-import { ApiNetworkProvider, NetworkConfig } from "@multiversx/sdk-network-providers/out";
+import { NetworkConfig } from "@multiversx/sdk-network-providers/out";
 import { ApiConfigService } from "@mvx-monorepo/common";
 import { Injectable, Logger } from "@nestjs/common";
 import { TokenConfig } from "../endpoints/tokens/entities/token.config";
@@ -13,10 +13,9 @@ import { SignerUtils } from "../utils/signer.utils";
 
 @Injectable()
 export class SwapService {
-  private readonly networkProvider: ApiNetworkProvider;
   private readonly logger: Logger;
   private readonly tokens: TokenConfig[];
-  private networkConfig!: NetworkConfig;
+  private networkConfig: NetworkConfig | undefined = undefined;
   private transactionWatcher!: TransactionWatcher;
 
   constructor(
@@ -28,7 +27,6 @@ export class SwapService {
   ) {
     this.logger = new Logger(SwapService.name);
 
-    this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
     this.tokens = this.tokenService.findAll();
   }
 
@@ -158,7 +156,7 @@ export class SwapService {
 
   async getNetworkConfig(): Promise<NetworkConfig> {
     if (!this.networkConfig) {
-      this.networkConfig = await this.networkProvider.getNetworkConfig();
+      this.networkConfig = await this.apiService.loadNetworkConfig();
     }
 
     return this.networkConfig;
@@ -166,7 +164,7 @@ export class SwapService {
 
   getTransactionWatcher(): TransactionWatcher {
     if (!this.transactionWatcher) {
-      this.transactionWatcher = new TransactionWatcher(this.networkProvider);
+      this.transactionWatcher = new TransactionWatcher(this.apiService.getNetworkProvider());
     }
 
     return this.transactionWatcher;

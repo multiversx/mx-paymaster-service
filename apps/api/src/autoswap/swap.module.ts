@@ -9,6 +9,8 @@ import { RelayerService } from "../endpoints/relayer/relayer.service";
 import { RelayerModule } from "../endpoints/relayer/relayer.module";
 import { PaymasterService } from "../endpoints/paymaster/paymaster.service";
 import { RedlockModule } from "@mvx-monorepo/common/redlock";
+import { SignerUtils } from "../utils/signer.utils";
+import { ApiService } from "../common/api/api.service";
 
 @Module({
   imports: [
@@ -20,7 +22,12 @@ import { RedlockModule } from "@mvx-monorepo/common/redlock";
     RelayerModule,
   ],
   providers: [
-    RelayerMonitoringService, SwapService, RelayerService, PaymasterService,
+    RelayerMonitoringService,
+    SwapService,
+    RelayerService,
+    PaymasterService,
+    SignerUtils,
+    ApiService,
   ],
   exports: [
     RelayerMonitoringService, SwapService,

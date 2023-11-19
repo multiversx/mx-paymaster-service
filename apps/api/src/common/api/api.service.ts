@@ -96,4 +96,8 @@ export class ApiService {
       throw new Error('Error when loading network config');
     }
   }
+
+  getNetworkProvider(): ApiNetworkProvider {
+    return this.networkProvider as ApiNetworkProvider;
+  }
 }
