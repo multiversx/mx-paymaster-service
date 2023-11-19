@@ -24,6 +24,7 @@ import { TokenConfig } from "../tokens/entities/token.config";
 import { PaymasterArguments } from "./entities/paymaster.arguments";
 import { AddressUtils } from "@multiversx/sdk-nestjs-common";
 import { PaymasterAbiJson } from "../../abis/paymaster.abi";
+import { SignerUtils } from "../../utils/signer.utils";
 
 @Injectable()
 export class PaymasterService {
@@ -36,6 +37,7 @@ export class PaymasterService {
     private readonly configService: ApiConfigService,
     private readonly cacheService: CacheService,
     private readonly tokenService: TokenService,
+    private readonly signerUtils: SignerUtils
   ) {
     this.logger = new Logger(PaymasterService.name);
 
@@ -88,7 +90,7 @@ export class PaymasterService {
 
     const paymasterAddress = this.configService.getPaymasterContractAddress(receiverShard);
     const contract = this.contractLoader.getContract(paymasterAddress);
-    const relayerAddress = this.configService.getRelayerAddress();
+    const relayerAddress = this.signerUtils.getAddressFromPem();
     const gasLimit = this.configService.getPaymasterGasLimit() + txDetails.gasLimit;
 
     const typedArguments = this.getTypedSCArguments({
