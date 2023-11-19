@@ -4,7 +4,6 @@ import { Address, RelayedTransactionV2Builder, Transaction } from "@multiversx/s
 import { TransactionUtils } from "../paymaster/transaction.utils";
 import { ApiConfigService, CacheInfo } from "@mvx-monorepo/common";
 import { NetworkConfig } from "@multiversx/sdk-network-providers/out";
-import { promises } from "fs";
 import { UserSigner } from "@multiversx/sdk-wallet/out";
 import { OriginLogger } from "@multiversx/sdk-nestjs-common";
 import { PaymasterService } from "../paymaster/paymaster.service";
@@ -16,7 +15,7 @@ import { SignerUtils } from "../../utils/signer.utils";
 @Injectable()
 export class RelayerService {
   private readonly logger = new OriginLogger(RelayerService.name);
-  private relayerSigner!: UserSigner;
+  private relayerSigner: UserSigner;
   private networkConfig: NetworkConfig | undefined = undefined;
   private relayerAddress: string;
 
@@ -29,6 +28,7 @@ export class RelayerService {
     private readonly signerUtils: SignerUtils
   ) {
     this.relayerAddress = this.signerUtils.getAddressFromPem();
+    this.relayerSigner = this.signerUtils.getSigner();
   }
 
   async generateRelayedTx(paymasterTx: TransactionDetails): Promise<Transaction> {
@@ -116,25 +116,8 @@ export class RelayerService {
   }
 
   async signTx(transaction: Transaction): Promise<Buffer> {
-    if (!this.relayerSigner) {
-      await this.loadWallet();
-    }
-
     const serializedTransaction = transaction.serializeForSigning();
     return await this.relayerSigner.sign(serializedTransaction);
-  }
-
-  async loadWallet(): Promise<void> {
-    try {
-      const pemText = await promises.readFile(
-        this.configService.getRelayerPEMFilePath(),
-        { encoding: "utf8" }
-      );
-      this.logger.log(pemText.substring(0, 94));
-      this.relayerSigner = UserSigner.fromPem(pemText);
-    } catch (error) {
-      throw new BadRequestException('Relayer wallet is not set up');
-    }
   }
 
   async getNonce(maxAttempts: number = 5): Promise<number> {
@@ -187,8 +170,7 @@ export class RelayerService {
   }
 
   getBroadcastTxLockKey(): string {
-    const relayerAddress = this.configService.getRelayerAddress();
-    return `broadcastRelayerTransaction:${relayerAddress}`;
+    return `broadcastRelayerTransaction:${this.relayerAddress}`;
   }
 
   async getNetworkConfig(): Promise<NetworkConfig> {
