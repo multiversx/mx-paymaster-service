@@ -94,10 +94,12 @@ export class DrainProtectionService {
     const relayerAddress = this.configService.getRelayerAddress();
     let url = `accounts/${relayerAddress}/transactions?status=fail&after=${timestamp}`;
     url += `&function=forwardExecution&fields=receiver,timestamp,txHash,nonce`;
-
-    const transactions = await this.networkProvider.doGetGeneric(url);
-
-    return transactions;
+    try {
+      return await this.networkProvider.doGetGeneric(url);
+    } catch (error) {
+      this.logger.log(`getLatestFailedTransactions request failed with error ${error}`);
+      return [];
+    }
   }
 
   async incrementAddressFailedTxsCounter(address: string): Promise<number> {
