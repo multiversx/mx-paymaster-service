@@ -1,8 +1,9 @@
 import { Address, AddressValue, BytesType, BytesValue, TokenTransfer, Transaction, TypedValue, VariadicType, VariadicValue } from "@multiversx/sdk-core/out";
 import { ContractLoader } from "../interactions";
 import { TransactionMetadata } from "@multiversx/sdk-transaction-decoder/lib/src/transaction.decoder";
+import { join } from "path";
 
-const ABI_PATH: string = 'libs/common/src/abi/paymaster/abi.json';
+const ABI_PATH: string = join(__dirname, 'abi.json');
 
 export class AbiPaymaster {
   private readonly contractLoader: ContractLoader = new ContractLoader(ABI_PATH);
