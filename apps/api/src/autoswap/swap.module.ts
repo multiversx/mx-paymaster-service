@@ -11,6 +11,7 @@ import { PaymasterService } from "../endpoints/paymaster/paymaster.service";
 import { RedlockModule } from "@mvx-monorepo/common/redlock";
 import { SignerUtils } from "../utils/signer.utils";
 import { ApiService } from "../common/api/api.service";
+import { DrainProtectionService } from "../drain-protection/drain.protection.service";
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ApiService } from "../common/api/api.service";
     PaymasterService,
     SignerUtils,
     ApiService,
+    DrainProtectionService,
   ],
   exports: [
     RelayerMonitoringService, SwapService,
