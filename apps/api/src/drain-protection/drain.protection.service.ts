@@ -43,6 +43,10 @@ export class DrainProtectionService {
     );
   }
 
+  async removeAddressBan(address: string): Promise<void> {
+    await this.cachingService.deleteRemote(CacheInfo.BannedAddresses(address).key);
+  }
+
   async pauseRelaying(): Promise<void> {
     await this.cachingService.setRemote(
       CacheInfo.SystemPaused.key,
