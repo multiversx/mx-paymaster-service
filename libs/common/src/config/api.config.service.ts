@@ -389,6 +389,15 @@ export class ApiConfigService {
     return this.configService.get<number>('features.drainProtection.port') ?? 7778;
   }
 
+  getDrainProtectionCronSchedule(): string {
+    const cronScheduleExpression = this.configService.get<string>('features.drainProtection.cron');
+    if (cronScheduleExpression === undefined) {
+      throw new Error('No drain protection cron expression present');
+    }
+
+    return cronScheduleExpression;
+  }
+
   getDrainProtectionAddressMaxFailedTxs(): number {
     return this.configService.get<number>('features.drainProtection.addressMaxFailedTxsPerInterval') ?? 2;
   }

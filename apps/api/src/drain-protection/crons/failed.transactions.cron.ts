@@ -1,19 +1,31 @@
 import { Locker } from "@multiversx/sdk-nestjs-common";
 import { Injectable, Logger } from "@nestjs/common";
-import { Cron } from "@nestjs/schedule";
+import { SchedulerRegistry } from "@nestjs/schedule";
 import { DrainProtectionService } from "../drain.protection.service";
+import { CronJob } from "cron";
+import { ApiConfigService } from "@mvx-monorepo/common";
 
 @Injectable()
 export class FailedTransactionsCron {
   private readonly logger: Logger;
 
   constructor(
-    private readonly drainProtectionService: DrainProtectionService
+    private readonly drainProtectionService: DrainProtectionService,
+    private readonly schedulerRegistry: SchedulerRegistry,
+    private readonly apiConfigService: ApiConfigService,
   ) {
     this.logger = new Logger(FailedTransactionsCron.name);
+
+    const handleTxStatusCheckCronJob = new CronJob(
+      this.apiConfigService.getDrainProtectionCronSchedule(),
+      async () => await this.handleTransactionStatusCheck()
+    );
+
+    this.schedulerRegistry.addCronJob(this.handleTransactionStatusCheck.name, handleTxStatusCheckCronJob);
+
+    handleTxStatusCheckCronJob.start();
   }
 
-  @Cron('*/20 * * * * *')
   async handleTransactionStatusCheck(): Promise<void> {
     await Locker.lock('checkTxsStatus', async () => {
       try {
