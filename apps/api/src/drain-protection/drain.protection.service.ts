@@ -52,11 +52,7 @@ export class DrainProtectionService {
   }
 
   async resumeRelaying(): Promise<void> {
-    await this.cachingService.setRemote(
-      CacheInfo.SystemPaused.key,
-      true,
-      CacheInfo.SystemPaused.ttl
-    );
+    await this.cachingService.deleteRemote(CacheInfo.SystemPaused.key);
   }
 
   async isAddressBanned(address: string): Promise<boolean> {
