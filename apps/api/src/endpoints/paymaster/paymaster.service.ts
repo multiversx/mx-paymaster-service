@@ -18,6 +18,7 @@ import { TokenConfig } from "../tokens/entities/token.config";
 import { AddressUtils } from "@multiversx/sdk-nestjs-common";
 import { SignerUtils } from "../../utils/signer.utils";
 import { ApiService } from "../../common/api/api.service";
+import { DrainProtectionService } from "../../drain-protection/drain.protection.service";
 
 @Injectable()
 export class PaymasterService {
@@ -30,7 +31,8 @@ export class PaymasterService {
     private readonly cacheService: CacheService,
     private readonly tokenService: TokenService,
     private readonly apiService: ApiService,
-    private readonly signerUtils: SignerUtils
+    private readonly signerUtils: SignerUtils,
+    private readonly drainProtectionService: DrainProtectionService
   ) {
     this.logger = new Logger(PaymasterService.name);
   }
@@ -74,10 +76,15 @@ export class PaymasterService {
       throw new BadRequestException('Missing function call');
     }
 
-    const senderFailedTxs = await this.getAddressFailedTxsCounter(metadata.sender);
-    if (senderFailedTxs > this.configService.getAddressMaxFailedTxsPerHour()) {
+    const senderIsBanned = await this.drainProtectionService.isAddressBanned(metadata.sender);
+    if (senderIsBanned) {
       this.logger.warn(`${metadata.sender} is attempting to submit a transaction while being timed out`);
 
+      throw new ForbiddenException('Too many failed transactions in the past hour');
+    }
+
+    const systemIsPaused = await this.drainProtectionService.isSystemPaused();
+    if (systemIsPaused) {
       throw new ForbiddenException('Too many failed transactions in the past hour');
     }
 
@@ -165,16 +172,6 @@ export class PaymasterService {
     }
 
     return txData;
-  }
-
-  async getAddressFailedTxsCounter(address: string): Promise<number> {
-    const currentHour = new Date().getHours().toString();
-
-    const failedTxs = await this.cacheService.getRemote<number>(
-      CacheInfo.AddressFailedTxs(address, currentHour).key
-    );
-
-    return failedTxs ?? 0;
   }
 
   async getNetworkConfig(): Promise<NetworkConfig> {
