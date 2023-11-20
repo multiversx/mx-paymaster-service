@@ -3,6 +3,7 @@ import { DrainProtectionService } from "./drain.protection.service";
 import { ApiConfigModule, DynamicModuleUtils } from "@mvx-monorepo/common";
 import configuration from '../../config/configuration';
 import { ScheduleModule } from "@nestjs/schedule";
+import { FailedTransactionsCron } from "./crons/failed.transactions.cron";
 
 @Module({
   imports: [
@@ -10,7 +11,7 @@ import { ScheduleModule } from "@nestjs/schedule";
     ApiConfigModule.forRoot(configuration),
     DynamicModuleUtils.getCachingModule(configuration),
   ],
-  providers: [DrainProtectionService],
-  exports: [DrainProtectionService],
+  providers: [DrainProtectionService, FailedTransactionsCron],
+  exports: [DrainProtectionService, FailedTransactionsCron],
 })
 export class DrainProtectionModule { }

@@ -382,6 +382,10 @@ export class ApiConfigService {
   }
 
   getAddressMaxFailedTxsPerHour(): number {
-    return this.configService.get<number>('features.drainProtection.addressMaxFailedTxsPerHour') ?? 3;
+    return this.configService.get<number>('features.drainProtection.addressMaxFailedTxsPerHour') ?? 2;
+  }
+
+  getMaxFailedTxsPerHour(): number {
+    return this.configService.get<number>('features.drainProtection.maxFailedTxsPerHour') ?? 5;
   }
 }

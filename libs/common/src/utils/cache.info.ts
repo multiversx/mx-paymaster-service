@@ -54,10 +54,22 @@ export class CacheInfo {
     };
   }
 
-  static TotalFailedTxs(day: string): CacheInfo {
+  static TotalFailedTxs(hour: string): CacheInfo {
     return {
-      key: `totalFailedTxs:${day}`,
+      key: `totalFailedTxs:${hour}`,
       ttl: Constants.oneDay(),
     };
   }
+
+  static BannedAddresses(address: string) {
+    return {
+      key: `bannedAddresses:${address}`,
+      ttl: Constants.oneHour() * 24,
+    };
+  }
+
+  static SystemPaused: CacheInfo = {
+    key: "systemPaused",
+    ttl: Constants.oneHour() * 8,
+  };
 }

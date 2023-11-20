@@ -1,6 +1,4 @@
-import { Locker } from "@multiversx/sdk-nestjs-common";
 import { Injectable, Logger } from "@nestjs/common";
-import { Cron } from "@nestjs/schedule";
 import { ApiNetworkProvider } from "@multiversx/sdk-network-providers/out";
 import { ApiConfigService, CacheInfo } from "@mvx-monorepo/common";
 import { CacheService } from "@multiversx/sdk-nestjs-cache";
@@ -18,28 +16,60 @@ export class DrainProtectionService {
     this.networkProvider = new ApiNetworkProvider(this.configService.getApiUrl());
   }
 
-  @Cron('*/20 * * * * *')
-  async handleTransactionStatusCheck() {
-    await Locker.lock('checkTxsStatus', async () => {
-      try {
-        const lastCheckTimestamp = await this.getLastCheckTimestamp();
-        await this.updateCheckTimestamp();
-
-        const failedTransactions = await this.getLatestFailedTransactions(lastCheckTimestamp);
-        if (failedTransactions.length === 0) {
-          return;
-        }
-
-        const processTxPromises = failedTransactions.map((tx: any) => this.processFailedTx(tx));
-        await Promise.all(processTxPromises);
-
-      } catch (error) {
-        this.logger.error(error);
-      }
-    });
+  async processFailedTransactions(transactions: any): Promise<void> {
+    const processTxPromises = transactions.map((tx: any) => this.processFailedTx(tx));
+    await Promise.all(processTxPromises);
   }
 
-  async getLastCheckTimestamp() {
+  async processFailedTx(txDetails: { receiver: string, txHash: string, timestamp: number, nonce: number }): Promise<void> {
+    this.logger.log(`Transaction ${txDetails.txHash} by ${txDetails.receiver} has status failed`);
+
+    const failedTxsCounter = await this.incrementAddressFailedTxsCounter(txDetails.receiver);
+    if (failedTxsCounter > this.configService.getAddressMaxFailedTxsPerHour()) {
+      await this.banAddress(txDetails.receiver);
+    }
+
+    const totalFailedLastHour = await this.incrementTotalFailedTxsCounter();
+    if (totalFailedLastHour > this.configService.getMaxFailedTxsPerHour()) {
+      await this.pauseRelaying();
+    }
+  }
+
+  async banAddress(address: string): Promise<void> {
+    await this.cachingService.setRemote(
+      CacheInfo.BannedAddresses(address).key,
+      true,
+      CacheInfo.BannedAddresses(address).ttl
+    );
+  }
+
+  async pauseRelaying(): Promise<void> {
+    await this.cachingService.setRemote(
+      CacheInfo.SystemPaused.key,
+      true,
+      CacheInfo.SystemPaused.ttl
+    );
+  }
+
+  async resumeRelaying(): Promise<void> {
+    await this.cachingService.setRemote(
+      CacheInfo.SystemPaused.key,
+      true,
+      CacheInfo.SystemPaused.ttl
+    );
+  }
+
+  async isAddressBanned(address: string): Promise<boolean> {
+    const addressIsBanned = await this.cachingService.getRemote<boolean>(CacheInfo.BannedAddresses(address).key);
+    return addressIsBanned ?? false;
+  }
+
+  async isSystemPaused(): Promise<boolean> {
+    const isPaused = await this.cachingService.getRemote<boolean>(CacheInfo.SystemPaused.key);
+    return isPaused ?? false;
+  }
+
+  async getLastCheckTimestamp(): Promise<number> {
     return await this.cachingService.getOrSetRemote(
       CacheInfo.StatusCheckTimestamp.key,
       async () => await this.getOneMinuteAgoTimestamp(),
@@ -47,7 +77,7 @@ export class DrainProtectionService {
     );
   }
 
-  async updateCheckTimestamp() {
+  async updateCheckTimestamp(): Promise<void> {
     await this.cachingService.setRemote(
       CacheInfo.StatusCheckTimestamp.key,
       this.getCurrentTimestamp(),
@@ -74,32 +104,23 @@ export class DrainProtectionService {
     return transactions;
   }
 
-  async processFailedTx(txDetails: { receiver: string, txHash: string, timestamp: number, nonce: number }) {
-    this.logger.log(`Transaction ${txDetails.txHash} by ${txDetails.receiver} has status failed`);
-
-    await this.incrementAddressFailedTxsCounter(txDetails.receiver);
-    await this.incrementTotalFailedTxsCounter();
-  }
-
-  async incrementAddressFailedTxsCounter(address: string) {
+  async incrementAddressFailedTxsCounter(address: string): Promise<number> {
     const currentHour = new Date().getHours().toString();
     const currentMinutes = new Date().getMinutes();
 
-    await this.cachingService.incrementRemote(
+    return await this.cachingService.incrementRemote(
       CacheInfo.AddressFailedTxs(address, currentHour).key,
       3600 - currentMinutes * 60
     );
   }
 
-  async incrementTotalFailedTxsCounter() {
-    const now = new Date();
-    const currentDay = now.getDate().toString();
-    const endOfDay = new Date().setHours(23, 59, 59);
-    const difference = endOfDay - now.getTime();
+  async incrementTotalFailedTxsCounter(): Promise<number> {
+    const currentHour = new Date().getHours().toString();
+    const currentMinutes = new Date().getMinutes();
 
-    await this.cachingService.incrementRemote(
-      CacheInfo.TotalFailedTxs(currentDay).key,
-      Math.floor(difference / 1000)
+    return await this.cachingService.incrementRemote(
+      CacheInfo.TotalFailedTxs(currentHour).key,
+      3600 - currentMinutes * 60
     );
   }
 }
