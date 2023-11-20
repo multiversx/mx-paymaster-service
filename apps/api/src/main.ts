@@ -101,13 +101,13 @@ async function bootstrap() {
   if (apiConfigService.getIsAutoSwapFeatureActive()) {
     const autoSwapApp = await NestFactory.create(SwapModule);
     autoSwapApp.setGlobalPrefix(globalPrefix);
-    await autoSwapApp.listen(7777);
+    await autoSwapApp.listen(apiConfigService.getAutoSwapFeaturePort());
   }
 
   if (apiConfigService.getIsDrainProtectionFeatureActive()) {
     const drainProtectionApp = await NestFactory.create(DrainProtectionModule);
     drainProtectionApp.setGlobalPrefix(globalPrefix);
-    await drainProtectionApp.listen(7778);
+    await drainProtectionApp.listen(apiConfigService.getDrainProtectionFeaturePort());
   }
 
   const logger = new Logger('Bootstrapper');

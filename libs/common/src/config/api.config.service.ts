@@ -343,6 +343,10 @@ export class ApiConfigService {
     return isAutoSwapActive;
   }
 
+  getAutoSwapFeaturePort(): number {
+    return this.configService.get<number>('features.swap.port') ?? 7777;
+  }
+
   getAutoSwapCronSchedule(): string {
     const cronScheduleExpression = this.configService.get<string>('features.swap.cron');
     if (cronScheduleExpression === undefined) {
@@ -381,8 +385,12 @@ export class ApiConfigService {
     return this.configService.get<boolean>('features.drainProtection.enabled') ?? true;
   }
 
+  getDrainProtectionFeaturePort(): number {
+    return this.configService.get<number>('features.drainProtection.port') ?? 7778;
+  }
+
   getAddressMaxFailedTxsPerHour(): number {
-    return this.configService.get<number>('features.drainProtection.addressMaxFailedTxsPerHour') ?? 2;
+    return this.configService.get<number>('features.drainProtection.addressMaxFailedTxsPerInterval') ?? 2;
   }
 
   getMaxFailedTxsPerHour(): number {
