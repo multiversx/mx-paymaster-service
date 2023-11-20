@@ -80,12 +80,12 @@ export class PaymasterService {
     if (senderIsBanned) {
       this.logger.warn(`${metadata.sender} is attempting to submit a transaction while being timed out`);
 
-      throw new ForbiddenException('Too many failed transactions in the past hour');
+      throw new ForbiddenException('Too many failed transactions');
     }
 
     const systemIsPaused = await this.drainProtectionService.isSystemPaused();
     if (systemIsPaused) {
-      throw new ForbiddenException('Too many failed transactions in the past hour');
+      throw new ForbiddenException('System temporarily unavailable');
     }
 
     const receiverAddress = Address.fromBech32(metadata.receiver);
