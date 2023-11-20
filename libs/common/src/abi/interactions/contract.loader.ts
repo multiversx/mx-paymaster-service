@@ -15,9 +15,6 @@ export class ContractLoader {
 
   private async load(contractAddress: string): Promise<SmartContract> {
     try {
-      console.log('cwd', process.cwd());
-      console.log('dirname', __dirname);
-      console.log('abi_path', this.abiPath);
       const jsonContent: string = await fs.promises.readFile(this.abiPath, { encoding: "utf8" });
       const json = JSON.parse(jsonContent);
 
