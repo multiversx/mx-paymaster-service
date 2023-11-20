@@ -25,12 +25,12 @@ export class DrainProtectionService {
     this.logger.log(`Transaction ${txDetails.txHash} by ${txDetails.receiver} has status failed`);
 
     const failedTxsCounter = await this.incrementAddressFailedTxsCounter(txDetails.receiver);
-    if (failedTxsCounter > this.configService.getAddressMaxFailedTxsPerHour()) {
+    if (failedTxsCounter > this.configService.getDrainProtectionAddressMaxFailedTxs()) {
       await this.banAddress(txDetails.receiver);
     }
 
     const totalFailedLastHour = await this.incrementTotalFailedTxsCounter();
-    if (totalFailedLastHour > this.configService.getMaxFailedTxsPerHour()) {
+    if (totalFailedLastHour > this.configService.getDrainProtectionTotalMaxFailedTxs()) {
       await this.pauseRelaying();
     }
   }
@@ -103,22 +103,40 @@ export class DrainProtectionService {
   }
 
   async incrementAddressFailedTxsCounter(address: string): Promise<number> {
-    const currentHour = new Date().getHours().toString();
-    const currentMinutes = new Date().getMinutes();
+    const intervalInMinutes = this.configService.getDrainProtectionAddressInterval();
+    const { startOfCurrentInterval, ttl } = this.calculateIntervalStartAndTtl(intervalInMinutes);
 
     return await this.cachingService.incrementRemote(
-      CacheInfo.AddressFailedTxs(address, currentHour).key,
-      3600 - currentMinutes * 60
+      CacheInfo.AddressFailedTxs(address, startOfCurrentInterval.toString()).key,
+      ttl
     );
   }
 
   async incrementTotalFailedTxsCounter(): Promise<number> {
-    const currentHour = new Date().getHours().toString();
-    const currentMinutes = new Date().getMinutes();
+    const intervalInMinutes = this.configService.getDrainProtectionTotalInterval();
+    const { startOfCurrentInterval, ttl } = this.calculateIntervalStartAndTtl(intervalInMinutes);
 
     return await this.cachingService.incrementRemote(
-      CacheInfo.TotalFailedTxs(currentHour).key,
-      3600 - currentMinutes * 60
+      CacheInfo.TotalFailedTxs(startOfCurrentInterval).key,
+      ttl
     );
+  }
+
+  private calculateIntervalStartAndTtl(intervalInMinutes: number): { startOfCurrentInterval: string, ttl: number } {
+    const currentTime = new Date();
+    const intervalInMillis = intervalInMinutes * 60 * 1000; // Convert interval to milliseconds
+    const currentTimestamp = currentTime.getTime();
+
+    // Calculate the start of the current interval
+    const startOfCurrentInterval = currentTimestamp - (currentTimestamp % intervalInMillis);
+    const startOfNextInterval = startOfCurrentInterval + intervalInMillis;
+
+    // Calculate TTL as the time remaining until the end of the current interval
+    const ttl = startOfNextInterval - currentTimestamp;
+
+    return {
+      startOfCurrentInterval: startOfCurrentInterval.toString(),
+      ttl: Math.floor(ttl / 1000),
+    };
   }
 }

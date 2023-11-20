@@ -389,11 +389,19 @@ export class ApiConfigService {
     return this.configService.get<number>('features.drainProtection.port') ?? 7778;
   }
 
-  getAddressMaxFailedTxsPerHour(): number {
+  getDrainProtectionAddressMaxFailedTxs(): number {
     return this.configService.get<number>('features.drainProtection.addressMaxFailedTxsPerInterval') ?? 2;
   }
 
-  getMaxFailedTxsPerHour(): number {
-    return this.configService.get<number>('features.drainProtection.maxFailedTxsPerHour') ?? 5;
+  getDrainProtectionAddressInterval(): number {
+    return this.configService.get<number>('features.drainProtection.addressIntervalInMinutes') ?? 60;
+  }
+
+  getDrainProtectionTotalInterval(): number {
+    return this.configService.get<number>('features.drainProtection.totalIntervalInMinutes') ?? 60;
+  }
+
+  getDrainProtectionTotalMaxFailedTxs(): number {
+    return this.configService.get<number>('features.drainProtection.totalMaxFailedTxsPerInterval') ?? 10;
   }
 }

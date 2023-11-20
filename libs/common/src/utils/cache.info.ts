@@ -47,17 +47,17 @@ export class CacheInfo {
     ttl: Constants.oneMinute() * 5,
   };
 
-  static AddressFailedTxs(address: string, hour: string) {
+  static AddressFailedTxs(address: string, interval: string) {
     return {
-      key: `addressFailedTxs:${address}:${hour}`,
+      key: `addressFailedTxs:${address}:${interval}`,
       ttl: Constants.oneHour(),
     };
   }
 
-  static TotalFailedTxs(hour: string): CacheInfo {
+  static TotalFailedTxs(interval: string): CacheInfo {
     return {
-      key: `totalFailedTxs:${hour}`,
-      ttl: Constants.oneDay(),
+      key: `totalFailedTxs:${interval}`,
+      ttl: Constants.oneHour(),
     };
   }
 
