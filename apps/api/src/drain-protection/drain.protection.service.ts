@@ -72,7 +72,7 @@ export class DrainProtectionService {
   async getLastCheckTimestamp(): Promise<number> {
     return await this.cachingService.getOrSetRemote(
       CacheInfo.StatusCheckTimestamp.key,
-      async () => await this.getOneMinuteAgoTimestamp(),
+      async () => await this.getFiveMinutesAgoTimestamp(),
       CacheInfo.StatusCheckTimestamp.ttl,
     );
   }
@@ -85,8 +85,8 @@ export class DrainProtectionService {
     );
   }
 
-  async getOneMinuteAgoTimestamp(): Promise<number> {
-    return await Promise.resolve(this.getCurrentTimestamp() - 172800);
+  async getFiveMinutesAgoTimestamp(): Promise<number> {
+    return await Promise.resolve(this.getCurrentTimestamp() - 300);
   }
 
   getCurrentTimestamp(): number {
@@ -124,6 +124,11 @@ export class DrainProtectionService {
       CacheInfo.TotalFailedTxs(startOfCurrentInterval).key,
       ttl
     );
+  }
+
+  async getRecentBroadcastedTransactions(): Promise<number> {
+    const transactionsCount = await this.cachingService.getRemote<number>(CacheInfo.RelayedTransactions.key);
+    return transactionsCount ?? 0;
   }
 
   private calculateIntervalStartAndTtl(intervalInMinutes: number): { startOfCurrentInterval: string, ttl: number } {
