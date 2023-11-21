@@ -5,17 +5,11 @@ import { ConfigService } from "@nestjs/config";
 export class BaseConfigService {
   constructor(protected readonly configService: ConfigService) { }
 
-  get<T = any>(key: string, defaultValue?: T): T | undefined {
+  get<T = any>(key: string, isIterableValue: boolean = false): T | undefined {
     const configValue = this.configService.get<T>(key);
-    if (key === 'globalPrefix') {
-      console.log('config', configValue);
-    }
-    if (configValue === undefined && !defaultValue) {
-      return;
-    }
 
     if (configValue === undefined) {
-      return defaultValue;
+      return;
     }
 
     if (typeof configValue !== 'string') {
@@ -30,6 +24,11 @@ export class BaseConfigService {
     }
 
     const keyName = match[1];
-    return this.configService.get(keyName);
+    const envValue = this.configService.get(keyName);
+
+    if (!isIterableValue || envValue === undefined) return envValue;
+
+    const result: any = envValue === '' ? [] : [...envValue.split(',')];
+    return result;
   }
 }

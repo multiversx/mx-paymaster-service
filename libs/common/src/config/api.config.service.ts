@@ -212,7 +212,7 @@ export class ApiConfigService extends BaseConfigService {
   }
 
   getSecurityAdmins(): string[] {
-    const admins = this.get<string[]>('security.admins');
+    const admins = this.get<string[]>('security.admins', true);
     if (admins === undefined) {
       throw new Error('No security admins value present');
     }
