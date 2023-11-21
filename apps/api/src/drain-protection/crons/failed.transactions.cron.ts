@@ -29,8 +29,8 @@ export class FailedTransactionsCron {
   async handleTransactionStatusCheck(): Promise<void> {
     await Locker.lock('checkTxsStatus', async () => {
       try {
-        const getRecentBroadcastedTxs = await this.drainProtectionService.getRecentBroadcastedTransactions();
-        if (getRecentBroadcastedTxs === 0) {
+        const numRecentBroadcastedTxs = await this.drainProtectionService.getRecentBroadcastedTransactions();
+        if (numRecentBroadcastedTxs === 0) {
           return;
         }
 
