@@ -1,13 +1,11 @@
 import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { RedlockConfiguration } from "../redlock";
+import { BaseConfigService } from "./base.config.service";
 
 @Injectable()
-export class ApiConfigService {
-  constructor(private readonly configService: ConfigService) { }
-
+export class ApiConfigService extends BaseConfigService {
   getApiUrl(): string {
-    const apiUrl = this.configService.get<string>('urls.api');
+    const apiUrl = this.get<string>('urls.api');
     if (!apiUrl) {
       throw new Error('No API url present');
     }
@@ -16,7 +14,7 @@ export class ApiConfigService {
   }
 
   getSwaggerUrls(): string[] {
-    const swaggerUrls = this.configService.get<string[]>('urls.swagger');
+    const swaggerUrls = this.get<string[]>('urls.swagger');
     if (!swaggerUrls) {
       throw new Error('No swagger urls present');
     }
@@ -25,7 +23,7 @@ export class ApiConfigService {
   }
 
   getRedisHost(): string {
-    const redisHost = this.configService.get<string>('redis.host');
+    const redisHost = this.get<string>('redis.host');
     if (!redisHost) {
       throw new Error('No redisHost present');
     }
@@ -34,7 +32,7 @@ export class ApiConfigService {
   }
 
   getRedisPort(): number {
-    const redisPort = this.configService.get<number>('redis.port');
+    const redisPort = this.get<number>('redis.port');
     if (!redisPort) {
       throw new Error('No redisPort present');
     }
@@ -43,19 +41,19 @@ export class ApiConfigService {
   }
 
   getRedisUsername(): string {
-    return this.configService.get<string>('redis.username') || 'default';
+    return this.get<string>('redis.username') || 'default';
   }
 
   getRedisPassword(): string {
-    return this.configService.get<string>('redis.password') || '';
+    return this.get<string>('redis.password') || '';
   }
 
   getRedisTls(): boolean {
-    return this.configService.get<boolean>('redis.tls') || false;
+    return this.get<boolean>('redis.tls') || false;
   }
 
   getDatabaseHost(): string {
-    const databaseHost = this.configService.get<string>('database.host');
+    const databaseHost = this.get<string>('database.host');
     if (!databaseHost) {
       throw new Error('No database.host present');
     }
@@ -64,7 +62,7 @@ export class ApiConfigService {
   }
 
   getDatabasePort(): number {
-    const databasePort = this.configService.get<number>('database.port');
+    const databasePort = this.get<number>('database.port');
     if (!databasePort) {
       throw new Error('No database.port present');
     }
@@ -72,9 +70,8 @@ export class ApiConfigService {
     return databasePort;
   }
 
-
   getDatabaseUsername(): string {
-    const databaseUsername = this.configService.get<string>('database.username');
+    const databaseUsername = this.get<string>('database.username');
     if (!databaseUsername) {
       throw new Error('No database.username present');
     }
@@ -83,7 +80,7 @@ export class ApiConfigService {
   }
 
   getDatabasePassword(): string {
-    const databasePassword = this.configService.get<string>('database.password');
+    const databasePassword = this.get<string>('database.password');
     if (!databasePassword) {
       throw new Error('No database.password present');
     }
@@ -92,7 +89,7 @@ export class ApiConfigService {
   }
 
   getDatabaseName(): string {
-    const databaseName = this.configService.get<string>('database.name');
+    const databaseName = this.get<string>('database.name');
     if (!databaseName) {
       throw new Error('No database.name present');
     }
@@ -116,7 +113,7 @@ export class ApiConfigService {
   }
 
   getIsPublicApiFeatureActive(): boolean {
-    const isApiActive = this.configService.get<boolean>('features.publicApi.enabled');
+    const isApiActive = this.get<boolean>('features.publicApi.enabled');
     if (isApiActive === undefined) {
       throw new Error('No public api feature flag present');
     }
@@ -125,7 +122,7 @@ export class ApiConfigService {
   }
 
   getPublicApiFeaturePort(): number {
-    const featurePort = this.configService.get<number>('features.publicApi.port');
+    const featurePort = this.get<number>('features.publicApi.port');
     if (featurePort === undefined) {
       throw new Error('No public api port present');
     }
@@ -134,7 +131,7 @@ export class ApiConfigService {
   }
 
   getIsPrivateApiFeatureActive(): boolean {
-    const isApiActive = this.configService.get<boolean>('features.privateApi.enabled');
+    const isApiActive = this.get<boolean>('features.privateApi.enabled');
     if (isApiActive === undefined) {
       throw new Error('No private api feature flag present');
     }
@@ -143,7 +140,7 @@ export class ApiConfigService {
   }
 
   getPrivateApiFeaturePort(): number {
-    const featurePort = this.configService.get<number>('features.privateApi.port');
+    const featurePort = this.get<number>('features.privateApi.port');
     if (featurePort === undefined) {
       throw new Error('No private api port present');
     }
@@ -152,7 +149,7 @@ export class ApiConfigService {
   }
 
   getIsCacheWarmerFeatureActive(): boolean {
-    const isCacheWarmerActive = this.configService.get<boolean>('features.cacheWarmer.enabled');
+    const isCacheWarmerActive = this.get<boolean>('features.cacheWarmer.enabled');
     if (isCacheWarmerActive === undefined) {
       throw new Error('No cache warmer feature flag present');
     }
@@ -161,7 +158,7 @@ export class ApiConfigService {
   }
 
   getCacheWarmerFeaturePort(): number {
-    const featurePort = this.configService.get<number>('features.cacheWarmer.port');
+    const featurePort = this.get<number>('features.cacheWarmer.port');
     if (featurePort === undefined) {
       throw new Error('No cache warmer port present');
     }
@@ -170,7 +167,7 @@ export class ApiConfigService {
   }
 
   getIsTransactionProcessorFeatureActive(): boolean {
-    const isTransactionProcessorActive = this.configService.get<boolean>('features.transactionProcessor.enabled');
+    const isTransactionProcessorActive = this.get<boolean>('features.transactionProcessor.enabled');
     if (isTransactionProcessorActive === undefined) {
       throw new Error('No transaction processor feature flag present');
     }
@@ -179,7 +176,7 @@ export class ApiConfigService {
   }
 
   getTransactionProcessorFeaturePort(): number {
-    const featurePort = this.configService.get<number>('features.transactionProcessor.port');
+    const featurePort = this.get<number>('features.transactionProcessor.port');
     if (featurePort === undefined) {
       throw new Error('No transaction processor port present');
     }
@@ -188,7 +185,7 @@ export class ApiConfigService {
   }
 
   getTransactionProcessorMaxLookBehind(): number {
-    const maxLookBehind = this.configService.get<number>('features.transactionProcessor.maxLookBehind');
+    const maxLookBehind = this.get<number>('features.transactionProcessor.maxLookBehind');
     if (maxLookBehind === undefined) {
       throw new Error('No transaction processor max look behind present');
     }
@@ -197,7 +194,7 @@ export class ApiConfigService {
   }
 
   getIsQueueWorkerFeatureActive(): boolean {
-    const isQueueWorkerActive = this.configService.get<boolean>('features.queueWorker.enabled');
+    const isQueueWorkerActive = this.get<boolean>('features.queueWorker.enabled');
     if (isQueueWorkerActive === undefined) {
       throw new Error('No queue worker feature flag present');
     }
@@ -206,7 +203,7 @@ export class ApiConfigService {
   }
 
   getQueueWorkerFeaturePort(): number {
-    const featurePort = this.configService.get<number>('features.queueWorker.port');
+    const featurePort = this.get<number>('features.queueWorker.port');
     if (featurePort === undefined) {
       throw new Error('No transaction processor port present');
     }
@@ -215,7 +212,7 @@ export class ApiConfigService {
   }
 
   getSecurityAdmins(): string[] {
-    const admins = this.configService.get<string[]>('security.admins');
+    const admins = this.get<string[]>('security.admins');
     if (admins === undefined) {
       throw new Error('No security admins value present');
     }
@@ -224,19 +221,19 @@ export class ApiConfigService {
   }
 
   getRateLimiterSecret(): string | undefined {
-    return this.configService.get<string>('rateLimiterSecret');
+    return this.get<string>('rateLimiterSecret');
   }
 
   getAxiosTimeout(): number {
-    return this.configService.get<number>('keepAliveTimeout.downstream') ?? 61000;
+    return this.get<number>('keepAliveTimeout.downstream') ?? 61000;
   }
 
   getIsKeepAliveAgentFeatureActive(): boolean {
-    return this.configService.get<boolean>('keepAliveAgent.enabled') ?? true;
+    return this.get<boolean>('keepAliveAgent.enabled') ?? true;
   }
 
   getServerTimeout(): number {
-    return this.configService.get<number>('keepAliveTimeout.upstream') ?? 60000;
+    return this.get<number>('keepAliveTimeout.upstream') ?? 60000;
   }
 
   getHeadersTimeout(): number {
@@ -244,11 +241,11 @@ export class ApiConfigService {
   }
 
   getUseCachingInterceptor(): boolean {
-    return this.configService.get<boolean>('useCachingInterceptor') ?? false;
+    return this.get<boolean>('useCachingInterceptor') ?? false;
   }
 
   getElasticUrl(): string {
-    const elasticUrls = this.configService.get<string[]>('urls.elastic');
+    const elasticUrls = this.get<string[]>('urls.elastic');
     if (!elasticUrls) {
       throw new Error('No elastic urls present');
     }
@@ -257,31 +254,31 @@ export class ApiConfigService {
   }
 
   getPoolLimit(): number {
-    return this.configService.get<number>('caching.poolLimit') ?? 100;
+    return this.get<number>('caching.poolLimit') ?? 100;
   }
 
   getProcessTtl(): number {
-    return this.configService.get<number>('caching.processTtl') ?? 60;
+    return this.get<number>('caching.processTtl') ?? 60;
   }
 
   getUseKeepAliveAgentFlag(): boolean {
-    return this.configService.get<boolean>('flags.useKeepAliveAgent') ?? true;
+    return this.get<boolean>('flags.useKeepAliveAgent') ?? true;
   }
 
   getIsAuthActive(): boolean {
-    return this.configService.get<boolean>('api.auth') ?? false;
+    return this.get<boolean>('api.auth') ?? false;
   }
 
   getNativeAuthMaxExpirySeconds(): number {
-    return this.configService.get<number>('nativeAuth.maxExpirySeconds') ?? 86400;
+    return this.get<number>('nativeAuth.maxExpirySeconds') ?? 86400;
   }
 
   getNativeAuthAcceptedOrigins(): string[] {
-    return this.configService.get<string[]>('nativeAuth.acceptedOrigins') ?? [];
+    return this.get<string[]>('nativeAuth.acceptedOrigins') ?? [];
   }
 
   getPaymasterContractAddress(shard: number = 0): string {
-    const paymasterAddress = this.configService.get<string>(`paymaster.contractAddress.shard${shard}`);
+    const paymasterAddress = this.get<string>(`paymaster.contractAddress.shard${shard}`);
     if (paymasterAddress === undefined || paymasterAddress === null) {
       throw new Error(`No paymaster contract address present for shard ${shard}`);
     }
@@ -290,7 +287,7 @@ export class ApiConfigService {
   }
 
   getPaymasterGasLimit(): number {
-    const gas = this.configService.get<number>('paymaster.gasLimit');
+    const gas = this.get<number>('paymaster.gasLimit');
     if (gas === undefined) {
       throw new Error('No paymaster gas limit present');
     }
@@ -299,7 +296,7 @@ export class ApiConfigService {
   }
 
   getRelayerAddress(): string {
-    const relayerAddress = this.configService.get<string>('relayer.address');
+    const relayerAddress = this.get<string>('relayer.address');
     if (relayerAddress === undefined) {
       throw new Error('No relayer address present');
     }
@@ -308,7 +305,7 @@ export class ApiConfigService {
   }
 
   getRelayerPEMFilePath(): string {
-    const pemFilePath = this.configService.get<string>('relayer.pemFilePath');
+    const pemFilePath = this.get<string>('relayer.pemFilePath');
     if (pemFilePath === undefined) {
       throw new Error('No relayer PEM path present');
     }
@@ -317,16 +314,16 @@ export class ApiConfigService {
   }
 
   getRelayerName(): string | undefined {
-    return this.configService.get<string>('relayer.name');
+    return this.get<string>('relayer.name');
   }
 
   getAcceptedTokens(): any[] {
-    const tokens = this.configService.get('tokens');
+    const tokens = this.get('tokens');
     return tokens;
   }
 
   getWrappedEGLDIdentifier(): string {
-    const identifier = this.configService.get<string>('wrappedEGLDIdentifier');
+    const identifier = this.get<string>('wrappedEGLDIdentifier');
     if (identifier === undefined) {
       throw new Error('No wrapped EGLD identifier present');
     }
@@ -335,7 +332,7 @@ export class ApiConfigService {
   }
 
   getIsAutoSwapFeatureActive(): boolean {
-    const isAutoSwapActive = this.configService.get<boolean>('features.swap.enabled');
+    const isAutoSwapActive = this.get<boolean>('features.swap.enabled');
     if (isAutoSwapActive === undefined) {
       throw new Error('No auto swap feature flag present');
     }
@@ -344,7 +341,7 @@ export class ApiConfigService {
   }
 
   getAutoSwapCronSchedule(): string {
-    const cronScheduleExpression = this.configService.get<string>('features.swap.cron');
+    const cronScheduleExpression = this.get<string>('features.swap.cron');
     if (cronScheduleExpression === undefined) {
       throw new Error('No auto swap cron expression present');
     }
@@ -353,9 +350,9 @@ export class ApiConfigService {
   }
 
   getRedlockConfiguration(): RedlockConfiguration {
-    const keyExpiration = this.configService.get<number>('redlock.keyExpiration') ?? 60000;
-    const maxRetries = this.configService.get<number>('redlock.maxRetries') ?? 50;
-    const retryInterval = this.configService.get<number>('redlock.retryInterval') ?? 1000;
+    const keyExpiration = this.get<number>('redlock.keyExpiration') ?? 60000;
+    const maxRetries = this.get<number>('redlock.maxRetries') ?? 50;
+    const retryInterval = this.get<number>('redlock.retryInterval') ?? 1000;
 
     return {
       keyExpiration,
@@ -365,7 +362,8 @@ export class ApiConfigService {
   }
 
   getGlobalPrefix(): string {
-    const globalPrefix = this.configService.get<string>('globalPrefix');
+    const globalPrefix = this.get<string>('globalPrefix');
+    console.log(globalPrefix);
     if (globalPrefix === undefined) {
       throw new Error('No API global prefix present');
     }
@@ -374,6 +372,6 @@ export class ApiConfigService {
   }
 
   getNumberOfShards(): number {
-    return this.configService.get<number>('numberOfShards') ?? 3;
+    return this.get<number>('numberOfShards') ?? 3;
   }
 }
