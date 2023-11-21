@@ -20,7 +20,7 @@ export class RelayerController {
   getInfo(): RelayerDetails {
     try {
       const result: RelayerDetails = {
-        address: this.configService.getRelayerAddress(),
+        address: this.relayerService.getAddress(),
         name: this.configService.getRelayerName() ?? '',
       };
       return result;
