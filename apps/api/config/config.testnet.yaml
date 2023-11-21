@@ -1,9 +1,8 @@
 urls:
-  api: 'https://testnet-api.multiversx.com'
+  api: ${API_URL}
   swagger:
-    - 'https://testnet-microservice.multiversx.com'
-    - 'https://devnet-microservice.multiversx.com'
-    - 'https://microservice.multiversx.com'
+    - 'https://testnet-tools.multiversx.com/paymaster'
+    - 'https://devnet-tools.multiversx.com/paymaster'
 features:
   publicApi:
     enabled: true
@@ -14,25 +13,25 @@ features:
   keepAliveAgent:
     enabled: true
   swap:
-    enabled: true
+    enabled: false
     cron: '* * * * *'
 nativeAuth:
   maxExpirySeconds:
   acceptedOrigins:
     - utils.multiversx.com
 security:
-  admins:
-rateLimiterSecret:
+  admins: ${SECURITY_ADMINS}
+rateLimiterSecret: ${RATE_LIMITER_SECRET}
 keepAliveTimeout:
   downstream: 61000
   upstream: 60000
 useCachingInterceptor: false
 redis:
-  host: '127.0.0.1'
-  port: 6379
-  username:
-  password: ''
-  tls: false
+  host: ${REDIS_HOST}
+  port: ${REDIS_PORT}
+  username: ${REDIS_USERNAME}
+  password: ${REDIS_PASSWORD}
+  tls: ${REDIS_TLS}
 globalPrefix: ''
 redlock:
   keyExpiration: 60000
@@ -45,8 +44,7 @@ paymaster:
     shard2: 'erd1qqqqqqqqqqqqqpgq0hdtg9mwf4hec826ykpdunl06885akw9dheq9n2unq'
   gasLimit: 10000000
 relayer:
-  address: 'erd17sd553s8cff7hulr33ej27z8435scyxpljdmv8u5a6hh0gpwvaxqsw04lu'
-  pemFilePath: 'apps/api/wallets/relayerWallet_shard0.pem'
+  pemFilePath: ${RELAYER_PEM_PATH}
   name:
 wrappedEGLDIdentifier: 'WEGLD-01e49d'
 tokens:
