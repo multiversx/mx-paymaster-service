@@ -11,6 +11,7 @@ import { ApiService } from "../../../common/api/api.service";
 import { CacheService } from "@multiversx/sdk-nestjs-cache";
 import { NetworkConfig } from "@multiversx/sdk-network-providers/out";
 import { SignerUtils } from "../../../../src/utils/signer.utils";
+import { DrainProtectionService } from "../../../../src/drain-protection/drain.protection.service";
 
 describe('PaymasterService', () => {
   let service: PaymasterService;
@@ -19,6 +20,7 @@ describe('PaymasterService', () => {
   let tokenService: TokenService;
   let cacheService: CacheService;
   let signerUtils: SignerUtils;
+  let drainProtectionService: DrainProtectionService;
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -60,6 +62,13 @@ describe('PaymasterService', () => {
             getAddressFromPem: jest.fn(),
           },
         },
+        {
+          provide: DrainProtectionService,
+          useValue: {
+            isAddressBanned: jest.fn(),
+            isSystemPaused: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -69,6 +78,7 @@ describe('PaymasterService', () => {
     tokenService = moduleRef.get<TokenService>(TokenService);
     cacheService = moduleRef.get<CacheService>(CacheService);
     signerUtils = moduleRef.get<SignerUtils>(SignerUtils);
+    drainProtectionService = moduleRef.get<DrainProtectionService>(DrainProtectionService);
   });
 
   it('should be defined', () => {
@@ -197,6 +207,8 @@ describe('PaymasterService', () => {
       jest.spyOn(configService, 'getWrappedEGLDIdentifier').mockReturnValueOnce('WEGLD-123456');
       jest.spyOn(cacheService, 'setRemote').mockResolvedValue();
       jest.spyOn(apiService, 'loadNetworkConfig').mockResolvedValue(new NetworkConfig());
+      jest.spyOn(drainProtectionService, 'isAddressBanned').mockResolvedValue(false);
+      jest.spyOn(drainProtectionService, 'isSystemPaused').mockResolvedValue(false);
 
       const paymasterTx = await service.generatePaymasterTx(txDetails, tokenIdentifier);
 

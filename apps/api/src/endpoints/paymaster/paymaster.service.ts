@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ForbiddenException, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { TransactionDetails } from "./entities/transaction.details";
 import {
   Address,
@@ -18,6 +18,7 @@ import { TokenConfig } from "../tokens/entities/token.config";
 import { AddressUtils } from "@multiversx/sdk-nestjs-common";
 import { SignerUtils } from "../../utils/signer.utils";
 import { ApiService } from "../../common/api/api.service";
+import { DrainProtectionService } from "../../drain-protection/drain.protection.service";
 
 @Injectable()
 export class PaymasterService {
@@ -30,7 +31,8 @@ export class PaymasterService {
     private readonly cacheService: CacheService,
     private readonly tokenService: TokenService,
     private readonly apiService: ApiService,
-    private readonly signerUtils: SignerUtils
+    private readonly signerUtils: SignerUtils,
+    private readonly drainProtectionService: DrainProtectionService
   ) {
     this.logger = new Logger(PaymasterService.name);
   }
@@ -72,6 +74,18 @@ export class PaymasterService {
 
     if (!metadata.functionName && !metadata.transfers) {
       throw new BadRequestException('Missing function call');
+    }
+
+    const senderIsBanned = await this.drainProtectionService.isAddressBanned(metadata.sender);
+    if (senderIsBanned) {
+      this.logger.warn(`${metadata.sender} is attempting to submit a transaction while being timed out`);
+
+      throw new ForbiddenException('Too many failed transactions');
+    }
+
+    const systemIsPaused = await this.drainProtectionService.isSystemPaused();
+    if (systemIsPaused) {
+      throw new ForbiddenException('System temporarily unavailable');
     }
 
     const receiverAddress = Address.fromBech32(metadata.receiver);
