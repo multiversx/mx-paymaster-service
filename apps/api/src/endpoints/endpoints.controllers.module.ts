@@ -5,6 +5,8 @@ import { HealthCheckController } from "@mvx-monorepo/common";
 import { TokenController } from "./tokens/token.controller";
 import { PaymasterController } from "./paymaster/paymaster.controller";
 import { RelayerController } from "./relayer/relayer.controller";
+import { AdminController } from "./admin/admin.controller";
+import { DrainProtectionService } from "../drain-protection/drain.protection.service";
 
 @Module({
   imports: [
@@ -12,12 +14,14 @@ import { RelayerController } from "./relayer/relayer.controller";
   ],
   providers: [
     DynamicModuleUtils.getNestJsApiConfigService(),
+    DrainProtectionService,
   ],
   controllers: [
     HealthCheckController,
     RelayerController,
     PaymasterController,
     TokenController,
+    AdminController,
   ],
 })
 export class EndpointsControllersModule { }

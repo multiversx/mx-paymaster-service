@@ -46,6 +46,8 @@ export class RelayerService {
         throw new Error(`Broadcast failed for tx ${relayedTxV2}`);
       }
 
+      await this.incrementSuccessfulTransactions();
+
       return transaction;
     } catch (error) {
       this.logger.error(error);
@@ -179,6 +181,13 @@ export class RelayerService {
     }
 
     return this.networkConfig;
+  }
+
+  async incrementSuccessfulTransactions(): Promise<void> {
+    await this.redisCacheService.increment(
+      CacheInfo.RelayedTransactions.key,
+      CacheInfo.RelayedTransactions.ttl
+    );
   }
 
   private isNonceTransactionError(error: string): boolean {

@@ -36,4 +36,40 @@ export class CacheInfo {
       ttl: Constants.oneSecond() * 10,
     };
   }
+
+  static RelayedTransactions: CacheInfo = {
+    key: "broadcastedRelayedTxs",
+    ttl: Constants.oneMinute() * 5,
+  };
+
+  static StatusCheckTimestamp: CacheInfo = {
+    key: "txStatusCheckTimestamp",
+    ttl: Constants.oneMinute() * 5,
+  };
+
+  static AddressFailedTxs(address: string, interval: string) {
+    return {
+      key: `addressFailedTxs:${address}:${interval}`,
+      ttl: Constants.oneHour(),
+    };
+  }
+
+  static TotalFailedTxs(interval: string): CacheInfo {
+    return {
+      key: `totalFailedTxs:${interval}`,
+      ttl: Constants.oneHour(),
+    };
+  }
+
+  static BannedAddresses(address: string) {
+    return {
+      key: `bannedAddresses:${address}`,
+      ttl: Constants.oneHour() * 24,
+    };
+  }
+
+  static SystemPaused: CacheInfo = {
+    key: "systemPaused",
+    ttl: Constants.oneHour() * 8,
+  };
 }

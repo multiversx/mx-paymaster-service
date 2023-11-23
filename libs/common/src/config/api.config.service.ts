@@ -340,6 +340,10 @@ export class ApiConfigService extends BaseConfigService {
     return isAutoSwapActive;
   }
 
+  getAutoSwapFeaturePort(): number {
+    return this.configService.get<number>('features.swap.port') ?? 7777;
+  }
+
   getAutoSwapCronSchedule(): string {
     const cronScheduleExpression = this.get<string>('features.swap.cron');
     if (cronScheduleExpression === undefined) {
@@ -373,5 +377,38 @@ export class ApiConfigService extends BaseConfigService {
 
   getNumberOfShards(): number {
     return this.get<number>('numberOfShards') ?? 3;
+  }
+
+  getIsDrainProtectionFeatureActive(): boolean {
+    return this.configService.get<boolean>('features.drainProtection.enabled') ?? true;
+  }
+
+  getDrainProtectionFeaturePort(): number {
+    return this.configService.get<number>('features.drainProtection.port') ?? 7778;
+  }
+
+  getDrainProtectionCronSchedule(): string {
+    const cronScheduleExpression = this.configService.get<string>('features.drainProtection.cron');
+    if (cronScheduleExpression === undefined) {
+      throw new Error('No drain protection cron expression present');
+    }
+
+    return cronScheduleExpression;
+  }
+
+  getDrainProtectionAddressMaxFailedTxs(): number {
+    return this.configService.get<number>('features.drainProtection.addressMaxFailedTxsPerInterval') ?? 2;
+  }
+
+  getDrainProtectionAddressInterval(): number {
+    return this.configService.get<number>('features.drainProtection.addressIntervalInMinutes') ?? 60;
+  }
+
+  getDrainProtectionTotalInterval(): number {
+    return this.configService.get<number>('features.drainProtection.totalIntervalInMinutes') ?? 60;
+  }
+
+  getDrainProtectionTotalMaxFailedTxs(): number {
+    return this.configService.get<number>('features.drainProtection.totalMaxFailedTxsPerInterval') ?? 10;
   }
 }

@@ -7,6 +7,7 @@ import configuration from '../../../config/configuration';
 import { RedlockModule } from "@mvx-monorepo/common/redlock";
 import { SignerUtils } from "../../utils/signer.utils";
 import { ApiService } from "../../common/api/api.service";
+import { DrainProtectionService } from "../../drain-protection/drain.protection.service";
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { ApiService } from "../../common/api/api.service";
     RelayerService,
     SignerUtils,
     ApiService,
+    DrainProtectionService,
   ],
   exports: [RelayerService],
 })
