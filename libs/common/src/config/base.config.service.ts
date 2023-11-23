@@ -39,14 +39,10 @@ export class BaseConfigService {
       throw new Error(`Could not parse config key ${key}`);
     }
 
-    if (keySegments.includes('json')) {
-      return this.getJson(keyName);
-    }
-
     const envValue = this.configService.get(keyName);
 
     if (keySegments[0] === 'arr') {
-      const expectedType = keySegments.length === 1 ? 'string' : keySegments[1];
+      const expectedType = keySegments.length === 1 ? 'str' : keySegments[1];
 
       return this.parseValueAsArray(envValue, expectedType);
     }
@@ -78,38 +74,36 @@ export class BaseConfigService {
         }
 
         return Number(value);
+      case 'json':
+        return this.parseJson(value);
       default:
         throw new Error(`Cannot parse config value ${value} as ${valueType}`);
     }
   }
 
-  parseValueAsArray(value: string | undefined, type: string): any {
+  parseValueAsArray(value: string | undefined, valueType: string): any {
     if (value === undefined || value === '') {
       return [];
     }
 
     const elements = value.split(',');
-    if (type === 'string') {
+    if (valueType === 'str') {
       return elements;
     }
 
     const result: any = [];
     elements.forEach(element => {
-      result.push(this.parseValue(element, type));
+      result.push(this.parseValue(element, valueType));
     });
 
     return result;
   }
 
-  getJson(key: string): any | undefined {
-    const envValue = this.configService.get(key);
-
-    if (envValue === undefined) return envValue;
-
+  parseJson(envValue: string): any {
     try {
       return JSON.parse(envValue);
     } catch (error) {
-      throw new Error(`Could not parse config key ${key} as json`);
+      throw new Error(`Could not parse config value ${envValue} as json`);
     }
   }
 }
