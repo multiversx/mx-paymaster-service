@@ -1,9 +1,14 @@
 import { Injectable } from "@nestjs/common";
 import { RedlockConfiguration } from "../redlock";
-import { BaseConfigService } from "./base.config.service";
+import { BaseConfigService } from "@multiversx/sdk-nestjs-common";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class ApiConfigService extends BaseConfigService {
+  constructor(protected readonly configService: ConfigService) {
+    super(configService);
+  }
+
   getApiUrl(): string {
     const apiUrl = this.get<string>('urls.api');
     if (!apiUrl) {
