@@ -193,4 +193,8 @@ export class RelayerService {
   private isNonceTransactionError(error: string): boolean {
     return typeof error === 'string' && (error.includes('lowerNonceInTx: true') || error.includes('veryHighNonceInTx: true'));
   }
+
+  getAddress(): string {
+    return this.relayerAddress;
+  }
 }

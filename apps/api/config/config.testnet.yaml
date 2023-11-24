@@ -1,52 +1,59 @@
 urls:
-  api: 'https://testnet-api.multiversx.com'
+  api: ${API_URL}
   swagger:
-    - 'https://testnet-microservice.multiversx.com'
-    - 'https://devnet-microservice.multiversx.com'
-    - 'https://microservice.multiversx.com'
+    - 'https://testnet-tools.multiversx.com/paymaster'
+    - 'https://devnet-tools.multiversx.com/paymaster'
 features:
   publicApi:
     enabled: true
-    port: 3000
+    port: ${num:PUBLIC_API_PORT}
   privateApi:
     enabled: true
-    port: 4000
+    port: ${num:PRIVATE_API_PORT}
   keepAliveAgent:
     enabled: true
   swap:
-    enabled: true
+    enabled: false
     cron: '* * * * *'
+    port: ${num:AUTO_SWAP_PORT}
+  drainProtection:
+    enabled: true
+    cron: '*/20 * * * * *'
+    port: ${num:DRAIN_PROTECTION_PORT}
+    addressIntervalInMinutes: 120
+    addressMaxFailedTxsPerInterval: 5 
+    totalIntervalInMinutes: 10
+    totalMaxFailedTxsPerInterval: 10 
 nativeAuth:
   maxExpirySeconds:
   acceptedOrigins:
     - utils.multiversx.com
 security:
-  admins:
-rateLimiterSecret:
+  admins: ${arr:SECURITY_ADMINS}
+rateLimiterSecret: ${RATE_LIMITER_SECRET}
 keepAliveTimeout:
   downstream: 61000
   upstream: 60000
 useCachingInterceptor: false
 redis:
-  host: '127.0.0.1'
-  port: 6379
-  username:
-  password: ''
-  tls: false
-globalPrefix: ''
+  host: ${REDIS_HOST}
+  port: ${num:REDIS_PORT}
+  username: ${REDIS_USERNAME}
+  password: ${REDIS_PASSWORD}
+  tls: ${bool:REDIS_TLS}
+globalPrefix: ${GLOBAL_PREFIX}
 redlock:
   keyExpiration: 60000
   maxRetries: 50
   retryInterval: 1000
 paymaster:
   contractAddress:
-    shard0: 'erd1qqqqqqqqqqqqqpgqwjrz8tjg2s4yuhpm7krw9d3n45ty3j0qnk6qnr2cm7'
+    shard0: 'erd1qqqqqqqqqqqqqpgqar3ap4jzj5zq5km9mezltz63kx4axgxqnk6qzvgxpk'
     shard1: 'erd1qqqqqqqqqqqqqpgqmvwpu8qx4c3umveamvswmuuxhf5lsmj5s3ssrhh2ed'
     shard2: 'erd1qqqqqqqqqqqqqpgq0hdtg9mwf4hec826ykpdunl06885akw9dheq9n2unq'
   gasLimit: 10000000
 relayer:
-  address: 'erd17sd553s8cff7hulr33ej27z8435scyxpljdmv8u5a6hh0gpwvaxqsw04lu'
-  pemFilePath: 'apps/api/wallets/relayerWallet_shard0.pem'
+  pemFilePath: ${RELAYER_PEM_PATH}
   name:
 wrappedEGLDIdentifier: 'WEGLD-01e49d'
 tokens:

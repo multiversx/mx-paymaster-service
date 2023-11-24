@@ -10,7 +10,9 @@ export class ApiConfigModule {
       module: ApiConfigModule,
       imports: [
         ConfigModule.forRoot({
+          envFilePath: '.env',
           load: [configFactory],
+          expandVariables: true,
         }),
       ],
       providers: [
