@@ -311,7 +311,7 @@ export class ApiConfigService extends BaseConfigService {
 
   getRelayerPEMFilePath(): string {
     const pemFilePath = this.get<string>('relayer.pemFilePath');
-    if (pemFilePath === undefined) {
+    if (pemFilePath === undefined || pemFilePath === '') {
       throw new Error('No relayer PEM path present');
     }
 
@@ -346,7 +346,7 @@ export class ApiConfigService extends BaseConfigService {
   }
 
   getAutoSwapFeaturePort(): number {
-    return this.configService.get<number>('features.swap.port') ?? 7777;
+    return this.get<number>('features.swap.port') ?? 7777;
   }
 
   getAutoSwapCronSchedule(): string {
@@ -385,15 +385,20 @@ export class ApiConfigService extends BaseConfigService {
   }
 
   getIsDrainProtectionFeatureActive(): boolean {
-    return this.configService.get<boolean>('features.drainProtection.enabled') ?? true;
+    const isDrainProtectionActive = this.get<boolean>('features.drainProtection.enabled');
+    if (isDrainProtectionActive === undefined) {
+      throw new Error('No drain protection feature flag present');
+    }
+
+    return isDrainProtectionActive;
   }
 
   getDrainProtectionFeaturePort(): number {
-    return this.configService.get<number>('features.drainProtection.port') ?? 7778;
+    return this.get<number>('features.drainProtection.port') ?? 7778;
   }
 
   getDrainProtectionCronSchedule(): string {
-    const cronScheduleExpression = this.configService.get<string>('features.drainProtection.cron');
+    const cronScheduleExpression = this.get<string>('features.drainProtection.cron');
     if (cronScheduleExpression === undefined) {
       throw new Error('No drain protection cron expression present');
     }
@@ -402,18 +407,18 @@ export class ApiConfigService extends BaseConfigService {
   }
 
   getDrainProtectionAddressMaxFailedTxs(): number {
-    return this.configService.get<number>('features.drainProtection.addressMaxFailedTxsPerInterval') ?? 2;
+    return this.get<number>('features.drainProtection.addressMaxFailedTxsPerInterval') ?? 2;
   }
 
   getDrainProtectionAddressInterval(): number {
-    return this.configService.get<number>('features.drainProtection.addressIntervalInMinutes') ?? 60;
+    return this.get<number>('features.drainProtection.addressIntervalInMinutes') ?? 60;
   }
 
   getDrainProtectionTotalInterval(): number {
-    return this.configService.get<number>('features.drainProtection.totalIntervalInMinutes') ?? 60;
+    return this.get<number>('features.drainProtection.totalIntervalInMinutes') ?? 60;
   }
 
   getDrainProtectionTotalMaxFailedTxs(): number {
-    return this.configService.get<number>('features.drainProtection.totalMaxFailedTxsPerInterval') ?? 10;
+    return this.get<number>('features.drainProtection.totalMaxFailedTxsPerInterval') ?? 10;
   }
 }
