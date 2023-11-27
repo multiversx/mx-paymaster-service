@@ -21,7 +21,7 @@
         "tsConfigPath": "apps/api/tsconfig.app.json",
         "assets": [
           {
-            "include": "../config/config.yaml",
+            "include": "../config/*.yaml", 
             "outDir": "./dist/apps/api/config"
           },
           {
