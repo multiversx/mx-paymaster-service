@@ -36,11 +36,11 @@ keepAliveTimeout:
   upstream: 60000
 useCachingInterceptor: false
 redis:
-  host: ${REDIS_HOST}
-  port: ${num:REDIS_PORT}
-  username: ${REDIS_USERNAME}
-  password: ${REDIS_PASSWORD}
-  tls: ${bool:REDIS_TLS}
+  host: ${PM_REDIS_HOST}
+  port: ${num:PM_REDIS_PORT}
+  username: ${PM_REDIS_USERNAME}
+  password: ${PM_REDIS_PASSWORD}
+  tls: ${bool:PM_REDIS_TLS}
 globalPrefix: ${GLOBAL_PREFIX}
 redlock:
   keyExpiration: 60000
