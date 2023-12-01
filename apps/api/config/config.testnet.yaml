@@ -48,43 +48,36 @@ redlock:
   retryInterval: 1000
 paymaster:
   contractAddress:
-    shard0: 'erd1qqqqqqqqqqqqqpgqar3ap4jzj5zq5km9mezltz63kx4axgxqnk6qzvgxpk'
-    shard1: 'erd1qqqqqqqqqqqqqpgqmvwpu8qx4c3umveamvswmuuxhf5lsmj5s3ssrhh2ed'
-    shard2: 'erd1qqqqqqqqqqqqqpgq0hdtg9mwf4hec826ykpdunl06885akw9dheq9n2unq'
+    shard0: 'erd1qqqqqqqqqqqqqpgq5jzvqr98xya5m4ce0cvmz60wpuqhe6u7nk6qcl9ftm'
+    shard1: 'erd1qqqqqqqqqqqqqpgqcfsatn0uud782nrkk230aq4dwmgtdhpys3ssu5nvzk'
+    shard2: 'erd1qqqqqqqqqqqqqpgq34p72qjp8rdut5kewtpde8fa5yu7hpz7dheqetm3ks'
   gasLimit: 10000000
 relayer:
   pemFilePath: ${RELAYER_PEM_PATH}
   name:
-wrappedEGLDIdentifier: 'WEGLD-01e49d'
+wrappedEGLDIdentifier: 'WEGLD-dd8471'
 tokens:
-  - USDC-f89dfe:
+  - USDC-5bee92:
       feePercentage: 3
       feeAmount: '10000'
-  - RIDE-3954e7:
+  - RIDE-d3a377:
       feePercentage: 5
       feeAmount: '0'
-      swapContract: 'erd1qqqqqqqqqqqqqpgq5dkvkrn56yrgavwx8fm9ld9eqj07g7ps295qchle4z'  #shard0
-      swapParameters: 'swapTokensFixedInput@WEGLD-01e49d@01'
+      swapContract: 'erd1qqqqqqqqqqqqqpgqzt7clww7329ajkq07x295h7hvl2hgnsaexks5m7sen'
+      swapParameters: 'swapTokensFixedInput@WEGLD-dd8471@01'
       swapMinAmount: '2000000000000000000'
       swapGasLimit: 12050000
-  - WEGLD-01e49d:
+  - WEGLD-dd8471:
       feePercentage: 5
       feeAmount: '0'
-      swapContract: 'erd1qqqqqqqqqqqqqpgqfy4z88duqdusaksn399f4dny527m6xe07h0sll0m2t'
+      swapContract: 'erd1qqqqqqqqqqqqqpgqhpmz3gh6jnwuyw4qxnksfh74tv8kdf6gexksrputsf'
       swapParameters: 'unwrapEgld'
       swapMinAmount: '50000000000000000'
       swapGasLimit: 4200000
-  - ASH-3538e0:
+  - UTK-f4e83f:
       feePercentage: 5
       feeAmount: '1000000'
-      swapContract: 'erd1qqqqqqqqqqqqqpgq64cxskker47fd9spaetc6vylt2c3kmm7295qx2hu6j'
-      swapParameters: 'swapTokensFixedInput@WEGLD-01e49d@01'
-      swapMinAmount: '50000000000000000'
-      swapGasLimit: 12050000
-  - ITHEUM-471743:
-      feePercentage: 5
-      feeAmount: '1000000'
-      swapContract: 'erd1qqqqqqqqqqqqqpgqkdxw8ewquxtt64t8rmdgqz3ja0zjycfm295qpdm8at'
-      swapParameters: 'swapTokensFixedInput@WEGLD-01e49d@01'
+      swapContract: 'erd1qqqqqqqqqqqqqpgqluxegqj5fymplf8vj3qen6ryh03dukhxexks43z5kc'
+      swapParameters: 'swapTokensFixedInput@WEGLD-dd8471@01'
       swapMinAmount: '1000000000000'
       swapGasLimit: 12050000
